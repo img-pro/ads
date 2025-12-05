@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Studio</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500;1,700;1,900&family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Archivo+Black&family=Anton&family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-brand">
+      <span class="toolbar-title">AD STUDIO</span>
+    </div>
+    <div class="toolbar-divider"></div>
+
+    <!-- Tab Navigation -->
+    <div class="toolbar-tabs">
+      <button class="tab-btn active" data-tab="builder">Builder</button>
+      <button class="tab-btn" data-tab="data">Data</button>
+    </div>
+
+    <div class="toolbar-spacer"></div>
+
+    <!-- Builder toolbar items -->
+    <div class="toolbar-builder-items">
+      <button class="toolbar-btn" onclick="resetDefaults()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset
+      </button>
+      <span class="toolbar-dims" id="canvasDims">1200 × 628</span>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn primary" onclick="downloadAd()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export PNG
+      </button>
+    </div>
+
+    <!-- Data toolbar items -->
+    <div class="toolbar-data-items" style="display: none;">
+      <button class="toolbar-btn" onclick="openApiKeyModal()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <span id="apiKeyStatus">Set API Key</span>
+      </button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn primary" onclick="exportAllAds()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export ZIP
+      </button>
+    </div>
+  </div>
+
+  <!-- Builder Tab -->
+  <div id="builder-tab" class="tab-content active">
+    <div class="main-layout">
+      <!-- Left Panel -->
+      <aside class="panel">
+        <div class="panel-content">
+          <!-- Canvas Size -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Canvas</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="size-grid">
+                <button class="size-btn" data-w="1200" data-h="800">
+                  <span class="dims">1200×800</span>Landscape
+                </button>
+                <button class="size-btn" data-w="1080" data-h="1080">
+                  <span class="dims">1080×1080</span>Square
+                </button>
+                <button class="size-btn active" data-w="1200" data-h="628">
+                  <span class="dims">1200×628</span>Reddit Feed
+                </button>
+                <button class="size-btn" data-w="1080" data-h="1920">
+                  <span class="dims">1080×1920</span>Story
+                </button>
+                <button class="size-btn" data-w="1200" data-h="675">
+                  <span class="dims">1200×675</span>Reddit Alt
+                </button>
+                <button class="size-btn" data-w="1600" data-h="900">
+                  <span class="dims">1600×900</span>16:9
+                </button>
+                <button class="size-btn" data-w="1456" data-h="180">
+                  <span class="dims">1456×180</span>Banner
+                </button>
+                <button class="size-btn" data-w="800" data-h="418">
+                  <span class="dims">800×418</span>Twitter
+                </button>
+              </div>
+              <div class="size-input-row">
+                <input type="number" id="width" value="1200">
+                <span>×</span>
+                <input type="number" id="height" value="628">
+              </div>
+            </div>
+          </div>
+
+          <!-- Colors -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Colors</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="prop-row">
+                <span class="prop-label">Background</span>
+                <div class="color-input">
+                  <input type="color" id="bgColorPicker" value="#0033FF">
+                  <input type="text" id="bgColor" value="#0033FF" maxlength="7">
+                </div>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Text</span>
+                <div class="color-input">
+                  <input type="color" id="textColorPicker" value="#ffffff">
+                  <input type="text" id="textColor" value="#FFFFFF" maxlength="7">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typography -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Typography</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <button class="reset-btn" onclick="resetTypography(); event.stopPropagation();">
+                <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset to font defaults
+              </button>
+              <div class="prop-row">
+                <span class="prop-label">Font</span>
+                <select id="fontFamily" class="prop-value">
+                  <optgroup label="Display / Impact">
+                    <option value="Bebas Neue">Bebas Neue</option>
+                    <option value="Anton">Anton</option>
+                    <option value="Archivo Black">Archivo Black</option>
+                    <option value="Oswald">Oswald</option>
+                    <option value="Barlow Condensed">Barlow Condensed</option>
+                  </optgroup>
+                  <optgroup label="Modern Sans">
+                    <option value="Inter" selected>Inter</option>
+                    <option value="Montserrat">Montserrat</option>
+                    <option value="Poppins">Poppins</option>
+                    <option value="Space Grotesk">Space Grotesk</option>
+                    <option value="DM Sans">DM Sans</option>
+                    <option value="Raleway">Raleway</option>
+                  </optgroup>
+                  <optgroup label="Classic Sans">
+                    <option value="Roboto">Roboto</option>
+                    <option value="Open Sans">Open Sans</option>
+                    <option value="Lato">Lato</option>
+                  </optgroup>
+                  <optgroup label="Serif">
+                    <option value="Playfair Display">Playfair Display</option>
+                  </optgroup>
+                  <optgroup label="System">
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Arial Black">Arial Black</option>
+                    <option value="Arial">Arial</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="prop-row-2col">
+                <select id="fontWeight">
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">SemiBold</option>
+                  <option value="700" selected>Bold</option>
+                  <option value="800">ExtraBold</option>
+                  <option value="900">Black</option>
+                </select>
+                <select id="fontStyle">
+                  <option value="normal" selected>Normal</option>
+                  <option value="italic">Italic</option>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Transform</span>
+                <select id="textTransform" class="prop-value">
+                  <option value="none">None</option>
+                  <option value="uppercase">Uppercase</option>
+                  <option value="capitalize">Title Case</option>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Tracking</span>
+                <div class="slider-row prop-value">
+                  <input type="range" id="letterSpacing" min="-0.05" max="0.15" step="0.005" value="-0.02">
+                  <span class="slider-value" id="letterSpacingVal">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Canvas Area -->
+      <main class="canvas-area">
+        <div class="canvas-container">
+          <canvas id="canvas"></canvas>
+        </div>
+        <div class="canvas-info" id="canvasInfo">1200 × 628 px</div>
+      </main>
+
+      <!-- Right Panel -->
+      <aside class="panel right">
+        <div class="panel-content">
+          <!-- Content -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Content</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <!-- Intro -->
+              <div class="text-block">
+                <div class="text-block-header" onclick="toggleTextBlock(this)">
+                  <span class="text-block-title">Intro</span>
+                  <span class="text-block-hint">Qualifier</span>
+                </div>
+                <div class="text-block-body">
+                  <input type="text" id="introText" value="WordPress User?">
+                  <div class="mini-row">
+                    <select id="introWeight">
+                      <option value="400">Regular</option>
+                      <option value="500" selected>Medium</option>
+                      <option value="600">SemiBold</option>
+                      <option value="700">Bold</option>
+                    </select>
+                    <select id="introTransform">
+                      <option value="none" selected>As typed</option>
+                      <option value="uppercase">UPPER</option>
+                    </select>
+                  </div>
+                  <div class="slider-row">
+                    <span class="prop-label">Size</span>
+                    <input type="range" id="introSize" min="0.25" max="0.7" step="0.01" value="0.38">
+                    <span class="slider-value" id="introSizeVal">0.38×</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Headline -->
+              <div class="text-block">
+                <div class="text-block-header" onclick="toggleTextBlock(this)">
+                  <span class="text-block-title">Headline</span>
+                  <span class="text-block-hint">Primary</span>
+                </div>
+                <div class="text-block-body">
+                  <input type="text" id="headlineText1" value="Stop Paying for" placeholder="Line 1">
+                  <input type="text" id="headlineText2" value="Bandwidth" placeholder="Line 2">
+                  <div class="slider-row">
+                    <span class="prop-label">Size</span>
+                    <input type="range" id="headlineSize" min="0.08" max="0.22" step="0.005" value="0.15">
+                    <span class="slider-value" id="headlineSizeVal">15%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Offer -->
+              <div class="text-block">
+                <div class="text-block-header" onclick="toggleTextBlock(this)">
+                  <span class="text-block-title">Offer</span>
+                  <span class="text-block-hint">CTA</span>
+                </div>
+                <div class="text-block-body">
+                  <input type="text" id="offerText" value="FREE: 100 GB / Mo">
+                  <div class="mini-row">
+                    <select id="offerWeight">
+                      <option value="400">Regular</option>
+                      <option value="600">SemiBold</option>
+                      <option value="700">Bold</option>
+                      <option value="800" selected>ExtraBold</option>
+                      <option value="900">Black</option>
+                    </select>
+                    <select id="offerTransform">
+                      <option value="none">As typed</option>
+                      <option value="uppercase" selected>UPPER</option>
+                    </select>
+                  </div>
+                  <div class="slider-row">
+                    <span class="prop-label">Size</span>
+                    <input type="range" id="offerSize" min="0.4" max="1.1" step="0.01" value="0.65">
+                    <span class="slider-value" id="offerSizeVal">0.65×</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="text-block">
+                <div class="text-block-header" onclick="toggleTextBlock(this)">
+                  <span class="text-block-title">Legend</span>
+                  <span class="text-block-hint">Fine print</span>
+                </div>
+                <div class="text-block-body">
+                  <input type="text" id="legendText" value="Cloudflare-level speed without touching DNS">
+                  <div class="mini-row">
+                    <select id="legendWeight">
+                      <option value="400" selected>Regular</option>
+                      <option value="500">Medium</option>
+                      <option value="600">SemiBold</option>
+                      <option value="700">Bold</option>
+                    </select>
+                    <select id="legendTransform">
+                      <option value="none" selected>As typed</option>
+                      <option value="uppercase">UPPER</option>
+                    </select>
+                  </div>
+                  <div class="slider-row">
+                    <span class="prop-label">Size</span>
+                    <input type="range" id="legendSize" min="0.15" max="0.5" step="0.01" value="0.22">
+                    <span class="slider-value" id="legendSizeVal">0.22×</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Data Tab -->
+  <div id="data-tab" class="tab-content">
+    <div class="data-layout">
+      <!-- AI Generation Panel -->
+      <div class="data-header">
+        <div class="ai-prompt-section">
+          <label class="ai-label">Generate copy variations with AI</label>
+          <div class="ai-prompt-row">
+            <textarea id="aiPrompt" class="ai-prompt-input" placeholder="Describe your product/service and target audience. E.g., 'CDN service for WordPress users, focus on speed and cost savings, generate 10 variations'"></textarea>
+            <button class="toolbar-btn primary" onclick="generateWithAI()" id="generateBtn">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <!-- Size Selection -->
+        <div class="size-selection">
+          <label class="ai-label">Export sizes</label>
+          <div class="size-checkboxes">
+            <label class="size-checkbox">
+              <input type="checkbox" value="1200x628" checked> Reddit Feed
+            </label>
+            <label class="size-checkbox">
+              <input type="checkbox" value="1080x1080" checked> Square
+            </label>
+            <label class="size-checkbox">
+              <input type="checkbox" value="1080x1920"> Story
+            </label>
+            <label class="size-checkbox">
+              <input type="checkbox" value="1200x675"> Reddit Alt
+            </label>
+            <label class="size-checkbox">
+              <input type="checkbox" value="800x418"> Twitter
+            </label>
+            <label class="size-checkbox">
+              <input type="checkbox" value="1600x900"> 16:9
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="data-table-container">
+        <table class="data-table" id="dataTable">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="selectAll" checked></th>
+              <th class="col-intro">Intro</th>
+              <th class="col-headline1">Headline 1</th>
+              <th class="col-headline2">Headline 2</th>
+              <th class="col-offer">Offer</th>
+              <th class="col-legend">Legend</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody">
+            <!-- Rows will be added dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add Row Button -->
+      <div class="data-footer">
+        <button class="toolbar-btn" onclick="addDataRow()">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Row
+        </button>
+        <span class="data-stats" id="dataStats">0 variations selected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay" id="apiKeyModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Anthropic API Key</h3>
+        <button class="modal-close" onclick="closeApiKeyModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Enter your Anthropic API key to enable AI-powered copy generation. Your key is stored locally in your browser and never sent to our servers.</p>
+        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="sk-ant-...">
+        <div class="modal-footer">
+          <button class="toolbar-btn" onclick="closeApiKeyModal()">Cancel</button>
+          <button class="toolbar-btn primary" onclick="saveApiKey()">Save Key</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
