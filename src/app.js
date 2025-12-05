@@ -87,10 +87,10 @@ const fontPresets = {
     legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
   },
   'Inter': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.02,
-    introSize: 0.38, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.65, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
+    fontWeight: '800', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.025,
+    introSize: 0.40, introWeight: '600', introTransform: 'none',
+    headlineSize: 0.17, offerSize: 0.70, offerWeight: '900', offerTransform: 'uppercase',
+    legendSize: 0.23, legendWeight: '400', legendTransform: 'none'
   },
   'Montserrat': {
     fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.01,
@@ -392,10 +392,10 @@ function generateAd() {
   const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, legendSize,
     legendWeight !== 'normal' ? legendWeight : globalWeight, globalStyle, fontFamily, letterSpacing);
 
-  const gapIntroToHeadline = baseHeadlineSize * 0.25;
-  const gapHeadlineLines = baseHeadlineSize * 0.08;
-  const gapHeadlineToOffer = baseHeadlineSize * 0.75;
-  const gapOfferToLegend = baseHeadlineSize * 0.45;
+  const gapIntroToHeadline = baseHeadlineSize * 0.27;
+  const gapHeadlineLines = baseHeadlineSize * 0.07;
+  const gapHeadlineToOffer = baseHeadlineSize * 0.70;
+  const gapOfferToLegend = baseHeadlineSize * 0.42;
 
   const elements = [];
   let contentHeight = 0;
@@ -912,10 +912,10 @@ async function renderAdToDataUrl(row, template, width, height) {
   const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, baseHeadlineSize * template.legendSize,
     template.legendWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
 
-  const gapIntroToHeadline = baseHeadlineSize * 0.25;
-  const gapHeadlineLines = baseHeadlineSize * 0.08;
-  const gapHeadlineToOffer = baseHeadlineSize * 0.75;
-  const gapOfferToLegend = baseHeadlineSize * 0.45;
+  const gapIntroToHeadline = baseHeadlineSize * 0.27;
+  const gapHeadlineLines = baseHeadlineSize * 0.07;
+  const gapHeadlineToOffer = baseHeadlineSize * 0.70;
+  const gapOfferToLegend = baseHeadlineSize * 0.42;
 
   const elements = [];
   let contentHeight = 0;
