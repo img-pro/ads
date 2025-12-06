@@ -148,10 +148,6 @@ function toggleSection(header) {
   header.parentElement.classList.toggle('collapsed');
 }
 
-function toggleTextBlock(header) {
-  header.parentElement.classList.toggle('collapsed');
-}
-
 // ==========================================
 // CONFIG CODE BLOCK
 // ==========================================
