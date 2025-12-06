@@ -1,0 +1,3 @@
+# Cloudflare Pages redirects
+# This is a static site, so all routes serve index.html
+/*    /index.html   200

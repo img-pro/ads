@@ -6,6 +6,76 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 // ==========================================
+// DEFAULT SYSTEM PROMPT
+// ==========================================
+
+const DEFAULT_SYSTEM_PROMPT = `You are an expert performance ad copywriter. Your copy is emotional, not rational. Research shows emotional ads succeed 2x more than feature-focused ones (31% vs 16%).
+
+## Core Principle: Emotion Over Features
+- Don't say what the product does — say how it makes them FEEL
+- Speak to identity: "Who am I if I use this?"
+- Tap into desires (freedom, control, status) and fears (missing out, falling behind, wasting time)
+- Features inform, emotions convert
+
+## The Four Voices (Visual Hierarchy)
+1. INTRO (Whisper) — Identity qualifier. Makes the right person stop and self-select. Examples: "For Creators", "Finally", "Tired of X?"
+2. HEADLINE (Shout) — Emotional hook. The promise, the dream. Two lines that hit hard. This is 50% of visual weight.
+3. OFFER (Speak) — Clear value, low friction. What they get, why now. Action-oriented.
+4. LEGEND (Murmur) — Trust signal. Removes anxiety. "No credit card", "Cancel anytime", social proof.
+
+## Copy Rules
+- Lead with emotional outcomes, not features
+- Use contrast: "More X, Less Y" / "Do X, Without Y"
+- Numbers build credibility (100GB, 10,000+ users, 14 days free)
+- Short, punchy words — no fluff, no jargon
+- Intros can be questions or identity labels
+- Headlines must be statements that evoke feeling
+- Offers answer: "What do I get?" and "What's the catch?"
+- Legends remove the last objection
+
+## Context
+- Platforms: Reddit, social feeds
+- Scan time: 0.6 seconds — copy must resolve instantly
+- Goal: Stop scroll → emotional connection → action`;
+
+function getSystemPrompt() {
+  const el = document.getElementById('systemPrompt');
+  return el?.value?.trim() || DEFAULT_SYSTEM_PROMPT;
+}
+
+function updateSystemPromptStyle() {
+  const el = document.getElementById('systemPrompt');
+  if (el) {
+    const isModified = el.value.trim() !== DEFAULT_SYSTEM_PROMPT.trim();
+    el.classList.toggle('modified', isModified);
+  }
+}
+
+function resetSystemPrompt() {
+  const el = document.getElementById('systemPrompt');
+  if (el) {
+    el.value = DEFAULT_SYSTEM_PROMPT;
+    updateSystemPromptStyle();
+    saveAppStateDebounced();
+  }
+}
+
+// Initialize system prompt and add change listener
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('systemPrompt');
+  if (el) {
+    if (!el.value) {
+      el.value = DEFAULT_SYSTEM_PROMPT;
+    }
+    updateSystemPromptStyle();
+    el.addEventListener('input', () => {
+      updateSystemPromptStyle();
+      saveAppStateDebounced();
+    });
+  }
+});
+
+// ==========================================
 // FONT PRESETS
 // ==========================================
 
@@ -53,13 +123,19 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     // Update export button based on active tab
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) {
-      if (tabId === 'data') {
-        exportBtn.textContent = 'Export All';
+      if (tabId === 'export') {
+        exportBtn.textContent = 'Export ZIP';
         exportBtn.onclick = exportAllAds;
       } else {
         exportBtn.textContent = 'Export PNG';
         exportBtn.onclick = downloadAd;
       }
+    }
+
+    // Refresh Export tab when switching to it
+    if (tabId === 'export') {
+      renderVariationCards();
+      renderPreview();
     }
   });
 });
@@ -88,45 +164,64 @@ function updateConfigCode() {
   const height = parseInt(document.getElementById('height')?.value) || 628;
   const bgColor = document.getElementById('bgColor')?.value || '#0033FF';
   const textColor = document.getElementById('textColor')?.value || '#FFFFFF';
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Inter';
+  const fontScale = parseFloat(document.getElementById('fontScale')?.value) || 1;
   const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
-  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055;
+  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.05;
 
   const intro = {
     text: document.getElementById('introText')?.value || '',
-    size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
+    size: parseFloat(document.getElementById('introSize')?.value) || 0.042,
     weight: document.getElementById('introWeight')?.value || '500',
-    transform: document.getElementById('introTransform')?.value || 'none',
+    transform: document.getElementById('introTransform')?.value || 'uppercase',
     marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
   };
 
   const headline = {
     text1: document.getElementById('headlineText1')?.value || '',
     text2: document.getElementById('headlineText2')?.value || '',
-    size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
+    size: parseFloat(document.getElementById('headlineSize')?.value) || 0.125,
     weight: document.getElementById('headlineWeight')?.value || '700',
-    transform: document.getElementById('headlineTransform')?.value || 'uppercase',
-    marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
-    lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+    transform: document.getElementById('headlineTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.015,
+    lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.0
   };
 
   const offer = {
     text: document.getElementById('offerText')?.value || '',
-    size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
-    weight: document.getElementById('offerWeight')?.value || '800',
-    transform: document.getElementById('offerTransform')?.value || 'uppercase',
-    marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+    size: parseFloat(document.getElementById('offerSize')?.value) || 0.065,
+    weight: document.getElementById('offerWeight')?.value || '600',
+    transform: document.getElementById('offerTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.07
   };
 
   const legend = {
     text: document.getElementById('legendText')?.value || '',
-    size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
+    size: parseFloat(document.getElementById('legendSize')?.value) || 0.028,
     weight: document.getElementById('legendWeight')?.value || '400',
     transform: document.getElementById('legendTransform')?.value || 'none',
-    marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+    marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.025
   };
 
-  const output = `const CONFIG = {
+  // Get font presets from CONFIG
+  const fontPresetsStr = JSON.stringify(CONFIG.fontPresets, null, 4)
+    .replace(/"([^"]+)":/g, "'$1':") // keys with single quotes
+    .replace(/"/g, "'"); // values with single quotes
+
+  const output = `// ==========================================
+// AD STUDIO - Configuration
+// ==========================================
+//
+// Typography Philosophy:
+// - Intro: Whisper — qualifier, context, identity
+// - Headline: Shout — emotional hook, the promise
+// - Offer: Speak — clear value, call to action
+// - Legend: Murmur — trust signal, friction removal
+//
+// Sizing uses a ~1.6x modular scale for visual harmony
+// Spacing creates intentional groupings and breathing room
+
+const CONFIG = {
   canvas: {
     width: ${n(width)},
     height: ${n(height)}
@@ -139,6 +234,7 @@ function updateConfigCode() {
 
   typography: {
     fontFamily: ${q(fontFamily)},
+    fontScale: ${n(fontScale)},
     letterSpacing: ${n(letterSpacing)},
     opticalYOffset: ${n(opticalYOffset)}
   },
@@ -173,7 +269,10 @@ function updateConfigCode() {
       transform: ${q(legend.transform)},
       marginTop: ${n(legend.marginTop)}
     }
-  }
+  },
+
+  // Font presets optimized for each typeface's characteristics
+  fontPresets: ${fontPresetsStr.split('\n').map((line, i) => i === 0 ? line : '  ' + line).join('\n')}
 };`;
 
   const codeEl = document.getElementById('configCode');
@@ -285,9 +384,6 @@ function renderSizeList(platform) {
 document.getElementById('sizePlatform')?.addEventListener('change', (e) => {
   renderSizeList(e.target.value);
 });
-
-// Initial render
-renderSizeList('reddit');
 
 // ==========================================
 // COLOR SYNC
@@ -631,9 +727,23 @@ function downloadAd() {
 }
 
 function resetDefaults() {
+  // Clear saved state
+  localStorage.removeItem('ad_studio_state');
+  // Reset data
+  dataRows = [];
+  activeVariationIndex = -1;
+  selectedExportSizes = new Set();
+  // Reload defaults
   loadDefaults();
   document.getElementById('sizePlatform').value = 'reddit';
+  document.getElementById('exportPlatform').value = 'reddit';
+  document.getElementById('aiPrompt').value = '';
+  document.getElementById('aiVariationCount').value = '8';
   renderSizeList('reddit');
+  renderDataTable();
+  renderVariationCards();
+  renderExportSizeList('reddit');
+  updateExportSummary();
   generateAd();
 }
 
@@ -673,6 +783,7 @@ document.querySelectorAll('#builder-tab input, #builder-tab select').forEach(inp
       applyFontPreset(e.target.value);
     }
     generateAd();
+    saveAppStateDebounced();
   });
 });
 
@@ -681,6 +792,148 @@ document.querySelectorAll('#builder-tab input, #builder-tab select').forEach(inp
 // ==========================================
 
 let dataRows = [];
+let activeVariationIndex = -1;
+let selectedExportSizes = new Set();
+
+// ==========================================
+// STATE PERSISTENCE
+// ==========================================
+
+function saveAppState() {
+  try {
+    const state = {
+      // Builder settings
+      builder: {
+        width: document.getElementById('width')?.value,
+        height: document.getElementById('height')?.value,
+        sizePlatform: document.getElementById('sizePlatform')?.value,
+        bgColor: document.getElementById('bgColor')?.value,
+        textColor: document.getElementById('textColor')?.value,
+        fontFamily: document.getElementById('fontFamily')?.value,
+        fontScale: document.getElementById('fontScale')?.value,
+        letterSpacing: document.getElementById('letterSpacing')?.value,
+        opticalYOffset: document.getElementById('opticalYOffset')?.value,
+        // Content
+        introText: document.getElementById('introText')?.value,
+        introSize: document.getElementById('introSize')?.value,
+        introWeight: document.getElementById('introWeight')?.value,
+        introTransform: document.getElementById('introTransform')?.value,
+        introMarginTop: document.getElementById('introMarginTop')?.value,
+        headlineText1: document.getElementById('headlineText1')?.value,
+        headlineText2: document.getElementById('headlineText2')?.value,
+        headlineSize: document.getElementById('headlineSize')?.value,
+        headlineWeight: document.getElementById('headlineWeight')?.value,
+        headlineTransform: document.getElementById('headlineTransform')?.value,
+        headlineMarginTop: document.getElementById('headlineMarginTop')?.value,
+        headlineLineHeight: document.getElementById('headlineLineHeight')?.value,
+        offerText: document.getElementById('offerText')?.value,
+        offerSize: document.getElementById('offerSize')?.value,
+        offerWeight: document.getElementById('offerWeight')?.value,
+        offerTransform: document.getElementById('offerTransform')?.value,
+        offerMarginTop: document.getElementById('offerMarginTop')?.value,
+        legendText: document.getElementById('legendText')?.value,
+        legendSize: document.getElementById('legendSize')?.value,
+        legendWeight: document.getElementById('legendWeight')?.value,
+        legendTransform: document.getElementById('legendTransform')?.value,
+        legendMarginTop: document.getElementById('legendMarginTop')?.value
+      },
+      // Data tab
+      data: {
+        variations: dataRows,
+        aiPrompt: document.getElementById('aiPrompt')?.value,
+        aiVariationCount: document.getElementById('aiVariationCount')?.value,
+        systemPrompt: document.getElementById('systemPrompt')?.value
+      },
+      // Export tab
+      export: {
+        platform: document.getElementById('exportPlatform')?.value,
+        selectedSizes: Array.from(selectedExportSizes)
+      }
+    };
+    localStorage.setItem('ad_studio_state', JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save state:', e);
+  }
+}
+
+function loadAppState() {
+  try {
+    const saved = localStorage.getItem('ad_studio_state');
+    if (!saved) return false;
+
+    const state = JSON.parse(saved);
+
+    // Restore Builder settings
+    if (state.builder) {
+      const b = state.builder;
+      Object.keys(b).forEach(key => {
+        const el = document.getElementById(key);
+        if (el && b[key] !== undefined && b[key] !== null) {
+          el.value = b[key];
+        }
+      });
+      // Sync color pickers
+      const bgColor = document.getElementById('bgColor')?.value;
+      const textColor = document.getElementById('textColor')?.value;
+      if (bgColor) document.getElementById('bgColorPicker').value = bgColor;
+      if (textColor) document.getElementById('textColorPicker').value = textColor;
+      // Render size list for saved platform
+      if (b.sizePlatform) {
+        renderSizeList(b.sizePlatform);
+      }
+    }
+
+    // Restore Data tab
+    if (state.data) {
+      dataRows = state.data.variations || [];
+      if (dataRows.length > 0) {
+        activeVariationIndex = 0;
+      }
+      if (state.data.aiPrompt) {
+        const prompt = document.getElementById('aiPrompt');
+        if (prompt) prompt.value = state.data.aiPrompt;
+      }
+      if (state.data.aiVariationCount) {
+        const count = document.getElementById('aiVariationCount');
+        if (count) count.value = state.data.aiVariationCount;
+      }
+      if (state.data.systemPrompt) {
+        const sysPrompt = document.getElementById('systemPrompt');
+        if (sysPrompt) {
+          sysPrompt.value = state.data.systemPrompt;
+          updateSystemPromptStyle();
+        }
+      }
+    }
+
+    // Restore Export tab
+    if (state.export) {
+      if (state.export.platform) {
+        const platform = document.getElementById('exportPlatform');
+        if (platform) platform.value = state.export.platform;
+      }
+      if (state.export.selectedSizes) {
+        selectedExportSizes = new Set(state.export.selectedSizes);
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.error('Failed to load state:', e);
+    return false;
+  }
+}
+
+// Debounced save to avoid excessive writes
+let saveTimeout;
+function saveAppStateDebounced() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveAppState, 300);
+}
+
+// Preview canvas setup
+const previewCanvas = document.getElementById('previewCanvas');
+const previewCtx = previewCanvas?.getContext('2d');
 
 function createDataRow(data = {}) {
   return {
@@ -694,77 +947,372 @@ function createDataRow(data = {}) {
   };
 }
 
-function renderDataTable() {
-  const tbody = document.getElementById('dataTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = dataRows.map((row, index) => `
-    <tr data-id="${row.id}">
-      <td class="col-check">
-        <input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRowSelection(${index})">
-      </td>
-      <td class="col-intro">
-        <input type="text" value="${escapeHtml(row.intro)}" onchange="updateRowField(${index}, 'intro', this.value)">
-      </td>
-      <td class="col-headline1">
-        <input type="text" value="${escapeHtml(row.headline1)}" onchange="updateRowField(${index}, 'headline1', this.value)">
-      </td>
-      <td class="col-headline2">
-        <input type="text" value="${escapeHtml(row.headline2)}" onchange="updateRowField(${index}, 'headline2', this.value)">
-      </td>
-      <td class="col-offer">
-        <input type="text" value="${escapeHtml(row.offer)}" onchange="updateRowField(${index}, 'offer', this.value)">
-      </td>
-      <td class="col-legend">
-        <input type="text" value="${escapeHtml(row.legend)}" onchange="updateRowField(${index}, 'legend', this.value)">
-      </td>
-      <td class="col-actions">
-        <button class="row-delete" onclick="deleteRow(${index})">
-          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </td>
-    </tr>
-  `).join('');
-
-  updateDataStats();
-}
-
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
+// Render data table for Data tab (spreadsheet view)
+function renderDataTable() {
+  const tbody = document.getElementById('dataTableBody');
+  const empty = document.getElementById('dataEmpty');
+  const countEl = document.getElementById('dataRowCount');
+
+  if (!tbody) return;
+
+  if (dataRows.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'flex';
+    if (countEl) countEl.textContent = '0';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+  if (countEl) countEl.textContent = dataRows.length;
+
+  tbody.innerHTML = dataRows.map((row, index) => `
+    <tr data-index="${index}">
+      <td class="col-num"><span class="row-num">${index + 1}</span></td>
+      <td class="col-check">
+        <input type="checkbox" ${row.selected ? 'checked' : ''}
+               onchange="toggleRowSelection(${index}); renderVariationCards();">
+      </td>
+      <td><input type="text" value="${escapeHtml(row.intro)}"
+                 onchange="updateRowField(${index}, 'intro', this.value)"
+                 placeholder="Intro"></td>
+      <td><input type="text" value="${escapeHtml(row.headline1)}"
+                 onchange="updateRowField(${index}, 'headline1', this.value)"
+                 placeholder="Headline 1"></td>
+      <td><input type="text" value="${escapeHtml(row.headline2)}"
+                 onchange="updateRowField(${index}, 'headline2', this.value)"
+                 placeholder="Headline 2"></td>
+      <td><input type="text" value="${escapeHtml(row.offer)}"
+                 onchange="updateRowField(${index}, 'offer', this.value)"
+                 placeholder="Offer"></td>
+      <td><input type="text" value="${escapeHtml(row.legend)}"
+                 onchange="updateRowField(${index}, 'legend', this.value)"
+                 placeholder="Legend"></td>
+      <td class="col-actions">
+        <button class="row-delete" onclick="deleteRow(${index})">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Render variation cards for Export tab (preview view)
+function renderVariationCards() {
+  const list = document.getElementById('variationsList');
+  if (!list) return;
+
+  if (dataRows.length === 0) {
+    list.innerHTML = `
+      <div class="variations-empty">
+        <p>No variations yet</p>
+        <span>Generate with AI or add manually</span>
+      </div>
+    `;
+    document.getElementById('variationCount').textContent = '0';
+    updateExportSummary();
+    return;
+  }
+
+  list.innerHTML = dataRows.map((row, index) => {
+    const headline = [row.headline1, row.headline2].filter(Boolean).join(' ');
+    return `
+      <div class="variation-card${index === activeVariationIndex ? ' active' : ''}"
+           data-index="${index}"
+           onclick="selectVariation(${index})">
+        <div class="variation-card-header">
+          <input type="checkbox" ${row.selected ? 'checked' : ''}
+                 onclick="event.stopPropagation(); toggleRowSelection(${index})">
+          <span class="variation-card-intro">${escapeHtml(row.intro) || 'No intro'}</span>
+          <button class="variation-card-delete" onclick="event.stopPropagation(); deleteRow(${index})">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="variation-card-headline">${escapeHtml(headline) || 'No headline'}</div>
+        <div class="variation-card-offer">${escapeHtml(row.offer) || 'No offer'}</div>
+        <div class="variation-card-legend">${escapeHtml(row.legend) || 'No legend'}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('variationCount').textContent = dataRows.length;
+  updateExportSummary();
+}
+
+function selectVariation(index) {
+  activeVariationIndex = index;
+  renderVariationCards();
+  renderPreview();
+}
+
 function addDataRow() {
   dataRows.push(createDataRow());
+  activeVariationIndex = dataRows.length - 1;
+  saveAppStateDebounced();
   renderDataTable();
+  renderVariationCards();
+  renderPreview();
 }
 
 function deleteRow(index) {
   dataRows.splice(index, 1);
+  if (activeVariationIndex >= dataRows.length) {
+    activeVariationIndex = dataRows.length - 1;
+  }
+  saveAppStateDebounced();
   renderDataTable();
+  renderVariationCards();
+  renderPreview();
 }
 
 function toggleRowSelection(index) {
   dataRows[index].selected = !dataRows[index].selected;
-  updateDataStats();
+  saveAppStateDebounced();
+  updateExportSummary();
 }
 
 function updateRowField(index, field, value) {
   dataRows[index][field] = value;
+  saveAppStateDebounced();
 }
 
-function updateDataStats() {
-  const selected = dataRows.filter(r => r.selected).length;
-  const stats = document.getElementById('dataStats');
-  if (stats) stats.textContent = `${selected} variation${selected !== 1 ? 's' : ''} selected`;
-}
-
-// Select all checkbox
+// Select all checkboxes (Data tab and Export tab)
 document.getElementById('selectAll')?.addEventListener('change', (e) => {
   dataRows.forEach(row => row.selected = e.target.checked);
+  saveAppStateDebounced();
   renderDataTable();
+  renderVariationCards();
+  updateExportSummary();
 });
+
+document.getElementById('selectAllExport')?.addEventListener('change', (e) => {
+  dataRows.forEach(row => row.selected = e.target.checked);
+  saveAppStateDebounced();
+  renderDataTable();
+  renderVariationCards();
+  updateExportSummary();
+});
+
+// ==========================================
+// EXPORT SIZE LIST
+// ==========================================
+
+function renderExportSizeList(platform) {
+  const list = document.getElementById('exportSizeList');
+  if (!list) return;
+
+  const sizes = SIZE_PRESETS[platform] || SIZE_PRESETS.reddit;
+
+  list.innerHTML = sizes.map(size => {
+    const key = `${size.w}x${size.h}`;
+    const isSelected = selectedExportSizes.has(key);
+    return `
+      <div class="export-size-item${isSelected ? ' selected' : ''}" data-size="${key}">
+        <input type="checkbox" ${isSelected ? 'checked' : ''}>
+        <span class="size-preview" style="aspect-ratio: ${size.w}/${size.h};"></span>
+        <span class="size-info">
+          <span class="size-dims">${size.w} × ${size.h}</span>
+          <span class="size-label">${size.label}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  // Bind click events
+  list.querySelectorAll('.export-size-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const key = item.dataset.size;
+      const checkbox = item.querySelector('input[type="checkbox"]');
+
+      if (selectedExportSizes.has(key)) {
+        selectedExportSizes.delete(key);
+        item.classList.remove('selected');
+        checkbox.checked = false;
+      } else {
+        selectedExportSizes.add(key);
+        item.classList.add('selected');
+        checkbox.checked = true;
+      }
+      updateExportSummary();
+      saveAppStateDebounced();
+    });
+  });
+}
+
+// Platform dropdown change for export
+document.getElementById('exportPlatform')?.addEventListener('change', (e) => {
+  renderExportSizeList(e.target.value);
+});
+
+function updateExportSummary() {
+  const selectedVariations = dataRows.filter(r => r.selected).length;
+  const selectedSizesCount = selectedExportSizes.size;
+  const totalFiles = selectedVariations * selectedSizesCount;
+
+  document.getElementById('selectedVariations').textContent = selectedVariations;
+  document.getElementById('selectedSizes').textContent = selectedSizesCount;
+  document.getElementById('totalFiles').textContent = totalFiles;
+}
+
+// ==========================================
+// PREVIEW RENDERING
+// ==========================================
+
+function renderPreview() {
+  if (!previewCanvas || !previewCtx) return;
+
+  const row = dataRows[activeVariationIndex];
+  const previewInfo = document.getElementById('previewInfo');
+
+  if (!row) {
+    previewCanvas.style.display = 'none';
+    if (previewInfo) previewInfo.textContent = 'Select a variation to preview';
+    return;
+  }
+
+  previewCanvas.style.display = 'block';
+
+  // Get current Builder settings
+  const width = parseInt(document.getElementById('width')?.value) || 1200;
+  const height = parseInt(document.getElementById('height')?.value) || 628;
+
+  // Set canvas size
+  previewCanvas.width = width * dpr;
+  previewCanvas.height = height * dpr;
+  previewCanvas.style.width = width + 'px';
+  previewCanvas.style.height = height + 'px';
+
+  if (previewInfo) previewInfo.textContent = `${width} × ${height} px`;
+
+  // Get template settings from Builder
+  const template = {
+    bgColor: document.getElementById('bgColor')?.value || '#0033FF',
+    textColor: document.getElementById('textColor')?.value || '#FFFFFF',
+    fontFamily: document.getElementById('fontFamily')?.value || 'Inter',
+    fontScale: parseFloat(document.getElementById('fontScale')?.value) || 1,
+    letterSpacing: parseFloat(document.getElementById('letterSpacing')?.value) || 0,
+    opticalYOffset: parseFloat(document.getElementById('opticalYOffset')?.value) || 0.05,
+    intro: {
+      size: parseFloat(document.getElementById('introSize')?.value) || 0.042,
+      weight: document.getElementById('introWeight')?.value || '500',
+      transform: document.getElementById('introTransform')?.value || 'uppercase',
+      marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
+    },
+    headline: {
+      size: parseFloat(document.getElementById('headlineSize')?.value) || 0.125,
+      weight: document.getElementById('headlineWeight')?.value || '700',
+      transform: document.getElementById('headlineTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.015,
+      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.0
+    },
+    offer: {
+      size: parseFloat(document.getElementById('offerSize')?.value) || 0.065,
+      weight: document.getElementById('offerWeight')?.value || '600',
+      transform: document.getElementById('offerTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.07
+    },
+    legend: {
+      size: parseFloat(document.getElementById('legendSize')?.value) || 0.028,
+      weight: document.getElementById('legendWeight')?.value || '400',
+      transform: document.getElementById('legendTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.025
+    }
+  };
+
+  // Apply transforms
+  const introText = applyTransform(row.intro, template.intro.transform);
+  const headlineText1 = applyTransform(row.headline1, template.headline.transform);
+  const headlineText2 = applyTransform(row.headline2, template.headline.transform);
+  const offerText = applyTransform(row.offer, template.offer.transform);
+  const legendText = applyTransform(row.legend, template.legend.transform);
+
+  const maxTextWidth = width * 0.88;
+  const fontScale = template.fontScale;
+
+  // Calculate font sizes
+  const introFontSize = fitText(previewCtx, introText, maxTextWidth * dpr, height * template.intro.size * fontScale * dpr, template.intro.weight, template.fontFamily, template.letterSpacing);
+  const headline1FontSize = fitText(previewCtx, headlineText1, maxTextWidth * dpr, height * template.headline.size * fontScale * dpr, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const headline2FontSize = fitText(previewCtx, headlineText2, maxTextWidth * dpr, height * template.headline.size * fontScale * dpr, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const offerFontSize = fitText(previewCtx, offerText, maxTextWidth * dpr, height * template.offer.size * fontScale * dpr, template.offer.weight, template.fontFamily, template.letterSpacing);
+  const legendFontSize = fitText(previewCtx, legendText, maxTextWidth * dpr, height * template.legend.size * fontScale * dpr, template.legend.weight, template.fontFamily, template.letterSpacing);
+
+  // Build elements
+  const elements = [];
+  let contentHeight = 0;
+
+  if (introText) {
+    const marginTop = height * template.intro.marginTop * fontScale * dpr;
+    contentHeight += marginTop;
+    elements.push({ text: introText, fontSize: introFontSize, weight: template.intro.weight, marginTop });
+    contentHeight += introFontSize;
+  }
+  if (headlineText1) {
+    const marginTop = height * template.headline.marginTop * fontScale * dpr;
+    contentHeight += marginTop;
+    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.headline.weight, marginTop });
+    contentHeight += headline1FontSize;
+  }
+  if (headlineText2) {
+    const lineGap = headline1FontSize * (template.headline.lineHeight - 1);
+    contentHeight += lineGap;
+    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: template.headline.weight, marginTop: lineGap });
+    contentHeight += headline2FontSize;
+  }
+  if (offerText) {
+    const marginTop = height * template.offer.marginTop * fontScale * dpr;
+    contentHeight += marginTop;
+    elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offer.weight, marginTop });
+    contentHeight += offerFontSize;
+  }
+  if (legendText) {
+    const marginTop = height * template.legend.marginTop * fontScale * dpr;
+    contentHeight += marginTop;
+    elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legend.weight, marginTop });
+    contentHeight += legendFontSize;
+  }
+
+  // Draw
+  previewCtx.fillStyle = template.bgColor;
+  previewCtx.fillRect(0, 0, width * dpr, height * dpr);
+
+  const opticalOffset = height * template.opticalYOffset * dpr;
+  let currentY = (height * dpr - contentHeight) / 2 - opticalOffset;
+
+  previewCtx.fillStyle = template.textColor;
+  previewCtx.textAlign = 'center';
+  previewCtx.textBaseline = 'top';
+
+  elements.forEach((el) => {
+    currentY += el.marginTop;
+    previewCtx.font = `${el.weight} ${el.fontSize}px "${template.fontFamily}"`;
+
+    if (template.letterSpacing !== 0) {
+      const charSpacing = el.fontSize * template.letterSpacing;
+      const text = el.text;
+      if (text) {
+        const totalWidth = previewCtx.measureText(text).width + (text.length - 1) * charSpacing;
+        let charX = (width * dpr) / 2 - totalWidth / 2;
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          const charWidth = previewCtx.measureText(char).width;
+          previewCtx.fillText(char, charX + charWidth / 2, currentY);
+          charX += charWidth + charSpacing;
+        }
+      }
+    } else {
+      previewCtx.fillText(el.text, (width * dpr) / 2, currentY);
+    }
+
+    currentY += el.fontSize;
+  });
+}
 
 // ==========================================
 // API KEY MANAGEMENT
@@ -795,7 +1343,13 @@ function saveApiKey() {
 function updateApiKeyStatus() {
   const status = document.getElementById('apiKeyStatus');
   const hasKey = !!localStorage.getItem('anthropic_api_key');
-  if (status) status.textContent = hasKey ? 'API Key Set' : 'Set API Key';
+  if (status) {
+    const span = status.querySelector('span');
+    if (span) {
+      span.textContent = hasKey ? 'API Key Set' : 'Set API Key';
+    }
+    status.classList.toggle('active', hasKey);
+  }
 }
 
 // ==========================================
@@ -811,12 +1365,15 @@ async function generateWithAI() {
 
   const prompt = document.getElementById('aiPrompt')?.value?.trim();
   if (!prompt) {
-    alert('Please enter a prompt describing your product/service and target audience.');
+    alert('Please describe your product or service to generate copy variations.');
     return;
   }
 
+  const variationCount = parseInt(document.getElementById('aiVariationCount')?.value) || 8;
   const btn = document.getElementById('generateBtn');
   btn?.classList.add('loading');
+
+  const systemPrompt = getSystemPrompt();
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -828,44 +1385,17 @@ async function generateWithAI() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 4096,
         messages: [{
           role: 'user',
-          content: `You are an expert performance ad copywriter. Your copy is emotional, not rational. Research shows emotional ads succeed 2x more than feature-focused ones (31% vs 16%).
-
-## Core Principle: Emotion Over Features
-- Don't say what the product does — say how it makes them FEEL
-- Speak to identity: "Who am I if I use this?"
-- Tap into desires (freedom, control, status) and fears (missing out, falling behind, wasting time)
-- Features inform, emotions convert
-
-## The Four Voices (Visual Hierarchy)
-1. INTRO (Whisper) — Identity qualifier. Makes the right person stop and self-select. Examples: "For Creators", "Finally", "Tired of X?"
-2. HEADLINE (Shout) — Emotional hook. The promise, the dream. Two lines that hit hard. This is 50% of visual weight.
-3. OFFER (Speak) — Clear value, low friction. What they get, why now. Action-oriented.
-4. LEGEND (Murmur) — Trust signal. Removes anxiety. "No credit card", "Cancel anytime", social proof.
-
-## Copy Rules
-- Lead with emotional outcomes, not features
-- Use contrast: "More X, Less Y" / "Do X, Without Y"
-- Numbers build credibility (100GB, 10,000+ users, 14 days free)
-- Short, punchy words — no fluff, no jargon
-- Intros can be questions or identity labels
-- Headlines must be statements that evoke feeling
-- Offers answer: "What do I get?" and "What's the catch?"
-- Legends remove the last objection
-
-## Context
-- Platforms: Reddit, social feeds
-- Scan time: 0.6 seconds — copy must resolve instantly
-- Goal: Stop scroll → emotional connection → action
+          content: `${systemPrompt}
 
 ## Brief from user:
 ${prompt}
 
 ## Output format
-Generate 5-8 variations exploring different emotional angles (aspiration, fear, belonging, control, simplicity). Each variation must have:
+Generate exactly ${variationCount} variations exploring different emotional angles (aspiration, fear, belonging, control, simplicity). Each variation must have:
 - intro: 1-3 words (identity/qualifier)
 - headline1: 2-4 words (first line of emotional hook)
 - headline2: 1-3 words (punch line)
@@ -892,7 +1422,13 @@ Return ONLY a JSON array, no other text:
       variations.forEach(v => {
         dataRows.push(createDataRow(v));
       });
+      if (dataRows.length > 0 && activeVariationIndex === -1) {
+        activeVariationIndex = 0;
+      }
+      saveAppStateDebounced();
       renderDataTable();
+      renderVariationCards();
+      renderPreview();
     }
   } catch (error) {
     console.error('AI Generation error:', error);
@@ -913,13 +1449,12 @@ async function exportAllAds() {
     return;
   }
 
-  const selectedSizes = Array.from(document.querySelectorAll('.size-checkbox input:checked'))
-    .map(cb => cb.value.split('x').map(Number));
-
-  if (selectedSizes.length === 0) {
+  if (selectedExportSizes.size === 0) {
     alert('Please select at least one size to export.');
     return;
   }
+
+  const selectedSizes = Array.from(selectedExportSizes).map(s => s.split('x').map(Number));
 
   // Dynamic import of JSZip
   if (!window.JSZip) {
@@ -930,40 +1465,41 @@ async function exportAllAds() {
   }
 
   const zip = new JSZip();
-  const btn = document.querySelector('.toolbar-data-items .primary');
+  const btn = document.getElementById('exportAllBtn');
   btn?.classList.add('loading');
 
   // Get current template settings
   const template = {
     bgColor: document.getElementById('bgColor')?.value || '#0033FF',
     textColor: document.getElementById('textColor')?.value || '#FFFFFF',
-    fontFamily: document.getElementById('fontFamily')?.value || 'Helvetica',
+    fontFamily: document.getElementById('fontFamily')?.value || 'Inter',
+    fontScale: parseFloat(document.getElementById('fontScale')?.value) || 1,
     letterSpacing: parseFloat(document.getElementById('letterSpacing')?.value) || 0,
-    opticalYOffset: parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055,
+    opticalYOffset: parseFloat(document.getElementById('opticalYOffset')?.value) || 0.05,
     intro: {
-      size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
+      size: parseFloat(document.getElementById('introSize')?.value) || 0.042,
       weight: document.getElementById('introWeight')?.value || '500',
-      transform: document.getElementById('introTransform')?.value || 'none',
+      transform: document.getElementById('introTransform')?.value || 'uppercase',
       marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
     },
     headline: {
-      size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
+      size: parseFloat(document.getElementById('headlineSize')?.value) || 0.125,
       weight: document.getElementById('headlineWeight')?.value || '700',
-      transform: document.getElementById('headlineTransform')?.value || 'uppercase',
-      marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
-      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+      transform: document.getElementById('headlineTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.015,
+      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.0
     },
     offer: {
-      size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
-      weight: document.getElementById('offerWeight')?.value || '800',
-      transform: document.getElementById('offerTransform')?.value || 'uppercase',
-      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+      size: parseFloat(document.getElementById('offerSize')?.value) || 0.065,
+      weight: document.getElementById('offerWeight')?.value || '600',
+      transform: document.getElementById('offerTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.07
     },
     legend: {
-      size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
+      size: parseFloat(document.getElementById('legendSize')?.value) || 0.028,
       weight: document.getElementById('legendWeight')?.value || '400',
       transform: document.getElementById('legendTransform')?.value || 'none',
-      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.025
     }
   };
 
@@ -1012,26 +1548,27 @@ async function renderAdToDataUrl(row, template, width, height) {
   const legendText = applyTransform(row.legend, template.legend.transform);
 
   const maxTextWidth = width * 0.88;
+  const fontScale = template.fontScale || 1;
 
   // Calculate font sizes
-  const introFontSize = fitText(tempCtx, introText, maxTextWidth, height * template.intro.size, template.intro.weight, template.fontFamily, template.letterSpacing);
-  const headline1FontSize = fitText(tempCtx, headlineText1, maxTextWidth, height * template.headline.size, template.headline.weight, template.fontFamily, template.letterSpacing);
-  const headline2FontSize = fitText(tempCtx, headlineText2, maxTextWidth, height * template.headline.size, template.headline.weight, template.fontFamily, template.letterSpacing);
-  const offerFontSize = fitText(tempCtx, offerText, maxTextWidth, height * template.offer.size, template.offer.weight, template.fontFamily, template.letterSpacing);
-  const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, height * template.legend.size, template.legend.weight, template.fontFamily, template.letterSpacing);
+  const introFontSize = fitText(tempCtx, introText, maxTextWidth, height * template.intro.size * fontScale, template.intro.weight, template.fontFamily, template.letterSpacing);
+  const headline1FontSize = fitText(tempCtx, headlineText1, maxTextWidth, height * template.headline.size * fontScale, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const headline2FontSize = fitText(tempCtx, headlineText2, maxTextWidth, height * template.headline.size * fontScale, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const offerFontSize = fitText(tempCtx, offerText, maxTextWidth, height * template.offer.size * fontScale, template.offer.weight, template.fontFamily, template.letterSpacing);
+  const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, height * template.legend.size * fontScale, template.legend.weight, template.fontFamily, template.letterSpacing);
 
   // Build elements
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    const marginTop = height * template.intro.marginTop;
+    const marginTop = height * template.intro.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: introText, fontSize: introFontSize, weight: template.intro.weight, marginTop });
     contentHeight += introFontSize;
   }
   if (headlineText1) {
-    const marginTop = height * template.headline.marginTop;
+    const marginTop = height * template.headline.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.headline.weight, marginTop });
     contentHeight += headline1FontSize;
@@ -1043,13 +1580,13 @@ async function renderAdToDataUrl(row, template, width, height) {
     contentHeight += headline2FontSize;
   }
   if (offerText) {
-    const marginTop = height * template.offer.marginTop;
+    const marginTop = height * template.offer.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offer.weight, marginTop });
     contentHeight += offerFontSize;
   }
   if (legendText) {
-    const marginTop = height * template.legend.marginTop;
+    const marginTop = height * template.legend.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legend.weight, marginTop });
     contentHeight += legendFontSize;
@@ -1148,7 +1685,17 @@ function loadDefaults() {
 }
 
 // Initialize
-loadDefaults();
+const hasStoredState = loadAppState();
+if (!hasStoredState) {
+  loadDefaults();
+}
 updateApiKeyStatus();
+// Render size lists based on saved platform or default
+const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
+renderSizeList(sizePlatform);
+const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
+renderExportSizeList(exportPlatform);
 renderDataTable();
+renderVariationCards();
+updateExportSummary();
 document.fonts.ready.then(() => generateAd());
