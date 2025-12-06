@@ -31,14 +31,14 @@ const CONFIG = {
 
   elements: {
     intro: {
-      text: 'For Creators',
+      text: 'WordPress Developers',
       size: 0.042,
       weight: '500',
       transform: 'uppercase',
       marginTop: 0
     },
     headline: {
-      text: ['Make More,', 'Worry Less'],
+      text: ['Stop Overpaying', 'for Bandwidth'],
       size: 0.125,
       weight: '700',
       transform: 'none',

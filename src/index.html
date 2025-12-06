@@ -13,33 +13,18 @@
 <body>
   <!-- Top Toolbar -->
   <div class="toolbar">
-    <div class="toolbar-brand">
-      <span class="toolbar-title">Ad Studio</span>
-    </div>
+    <span class="toolbar-title">Ad Studio</span>
 
-    <!-- Tab Navigation -->
+    <div class="toolbar-spacer"></div>
+
     <nav class="toolbar-nav">
       <button class="nav-btn active" data-tab="builder">Builder</button>
       <button class="nav-btn" data-tab="data">Data</button>
-      <div class="nav-indicator"></div>
     </nav>
 
     <div class="toolbar-spacer"></div>
 
-    <!-- Builder toolbar items -->
-    <div class="toolbar-builder-items">
-      <button class="toolbar-btn" onclick="resetDefaults()">Reset</button>
-      <span class="toolbar-dims" id="canvasDims">1200 × 628</span>
-      <button class="toolbar-btn primary" onclick="downloadAd()">Export PNG</button>
-    </div>
-
-    <!-- Data toolbar items -->
-    <div class="toolbar-data-items" style="display: none;">
-      <button class="toolbar-btn" onclick="openApiKeyModal()">
-        <span id="apiKeyStatus">API Key</span>
-      </button>
-      <button class="toolbar-btn primary" onclick="exportAllAds()">Export ZIP</button>
-    </div>
+    <button class="toolbar-btn primary" id="exportBtn" onclick="downloadAd()">Export PNG</button>
   </div>
 
   <!-- Builder Tab -->
@@ -168,10 +153,16 @@
             </div>
             <div class="section-body">
               <pre id="configCode" class="config-code"></pre>
-              <button class="reset-btn" onclick="copyConfigCode()">
-                <svg class="icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy
-              </button>
+              <div class="config-actions">
+                <button class="reset-btn" onclick="copyConfigCode()">
+                  <svg class="icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy
+                </button>
+                <button class="reset-btn" onclick="resetDefaults()">
+                  <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -357,7 +348,10 @@
       <!-- AI Generation Panel -->
       <div class="data-header">
         <div class="ai-prompt-section">
-          <label class="ai-label">Generate copy variations with AI</label>
+          <div class="ai-label-row">
+            <label class="ai-label">Generate copy variations with AI</label>
+            <button class="api-key-btn" onclick="openApiKeyModal()" id="apiKeyStatus">Set API Key</button>
+          </div>
           <div class="ai-prompt-row">
             <textarea id="aiPrompt" class="ai-prompt-input" placeholder="Describe your product/service and target audience. E.g., 'CDN service for WordPress users, focus on speed and cost savings, generate 10 variations'"></textarea>
             <button class="toolbar-btn primary" onclick="generateWithAI()" id="generateBtn">

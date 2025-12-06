@@ -50,8 +50,17 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.getElementById(`${tabId}-tab`).classList.add('active');
 
-    document.querySelector('.toolbar-builder-items').style.display = tabId === 'builder' ? 'flex' : 'none';
-    document.querySelector('.toolbar-data-items').style.display = tabId === 'data' ? 'flex' : 'none';
+    // Update export button based on active tab
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+      if (tabId === 'data') {
+        exportBtn.textContent = 'Export All';
+        exportBtn.onclick = exportAllAds;
+      } else {
+        exportBtn.textContent = 'Export PNG';
+        exportBtn.onclick = downloadAd;
+      }
+    }
   });
 });
 
