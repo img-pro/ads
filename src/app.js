@@ -191,15 +191,94 @@ function copyConfigCode() {
 // SIZE PRESETS
 // ==========================================
 
-document.querySelectorAll('.size-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('width').value = btn.dataset.w;
-    document.getElementById('height').value = btn.dataset.h;
-    generateAd();
+const SIZE_PRESETS = {
+  reddit: [
+    { w: 1200, h: 628, label: 'Feed', ratio: '1.91:1' },
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
+    { w: 1200, h: 675, label: 'Card', ratio: '16:9' }
+  ],
+  facebook: [
+    { w: 1200, h: 628, label: 'Feed', ratio: '1.91:1' },
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
+    { w: 1080, h: 1350, label: 'Portrait', ratio: '4:5' },
+    { w: 1080, h: 1920, label: 'Story', ratio: '9:16' }
+  ],
+  instagram: [
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
+    { w: 1080, h: 1350, label: 'Portrait', ratio: '4:5' },
+    { w: 1080, h: 1920, label: 'Story/Reel', ratio: '9:16' },
+    { w: 1200, h: 628, label: 'Landscape', ratio: '1.91:1' }
+  ],
+  linkedin: [
+    { w: 1200, h: 627, label: 'Feed', ratio: '1.91:1' },
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
+    { w: 1080, h: 1350, label: 'Portrait', ratio: '4:5' }
+  ],
+  x: [
+    { w: 1200, h: 628, label: 'Feed', ratio: '1.91:1' },
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
+    { w: 1600, h: 900, label: 'Video', ratio: '16:9' }
+  ],
+  tiktok: [
+    { w: 1080, h: 1920, label: 'Video', ratio: '9:16' },
+    { w: 1080, h: 1080, label: 'Square', ratio: '1:1' }
+  ],
+  youtube: [
+    { w: 1920, h: 1080, label: 'Video', ratio: '16:9' },
+    { w: 1080, h: 1920, label: 'Shorts', ratio: '9:16' },
+    { w: 1280, h: 720, label: 'Thumbnail', ratio: '16:9' }
+  ],
+  display: [
+    { w: 300, h: 250, label: 'Medium Rectangle', ratio: '' },
+    { w: 336, h: 280, label: 'Large Rectangle', ratio: '' },
+    { w: 728, h: 90, label: 'Leaderboard', ratio: '' },
+    { w: 300, h: 600, label: 'Half Page', ratio: '' },
+    { w: 160, h: 600, label: 'Skyscraper', ratio: '' },
+    { w: 320, h: 100, label: 'Mobile Banner', ratio: '' }
+  ]
+};
+
+function renderSizeList(platform) {
+  const list = document.getElementById('sizeList');
+  if (!list) return;
+
+  const sizes = SIZE_PRESETS[platform] || SIZE_PRESETS.reddit;
+  const currentW = parseInt(document.getElementById('width')?.value) || 0;
+  const currentH = parseInt(document.getElementById('height')?.value) || 0;
+
+  list.innerHTML = sizes.map(size => {
+    const isActive = size.w === currentW && size.h === currentH;
+    const ratioText = size.ratio ? ` · ${size.ratio}` : '';
+    return `
+      <button class="size-btn${isActive ? ' active' : ''}" data-w="${size.w}" data-h="${size.h}">
+        <span class="size-preview" style="aspect-ratio: ${size.w}/${size.h};"></span>
+        <span class="size-info">
+          <span class="size-dims">${size.w} × ${size.h}</span>
+          <span class="size-label">${size.label}${ratioText}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+
+  // Bind click events
+  list.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      list.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('width').value = btn.dataset.w;
+      document.getElementById('height').value = btn.dataset.h;
+      generateAd();
+    });
   });
+}
+
+// Platform dropdown change
+document.getElementById('sizePlatform')?.addEventListener('change', (e) => {
+  renderSizeList(e.target.value);
 });
+
+// Initial render
+renderSizeList('reddit');
 
 // ==========================================
 // COLOR SYNC
@@ -231,7 +310,7 @@ syncColors('textColorPicker', 'textColor');
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener('input', () => {
-      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('sizeList')?.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
     });
   }
 });
@@ -252,8 +331,10 @@ function updateDisplays() {
   if (canvasInfo) canvasInfo.textContent = `${w} × ${h} px`;
 
   // Typography
+  const fontScaleVal = document.getElementById('fontScaleVal');
   const letterSpacingVal = document.getElementById('letterSpacingVal');
   const opticalYOffsetVal = document.getElementById('opticalYOffsetVal');
+  if (fontScaleVal) fontScaleVal.textContent = Math.round(parseFloat(document.getElementById('fontScale')?.value || 1) * 100) + '%';
   if (letterSpacingVal) letterSpacingVal.textContent = Math.round(parseFloat(document.getElementById('letterSpacing')?.value || 0) * 100) + '%';
   if (opticalYOffsetVal) opticalYOffsetVal.textContent = parseFloat(document.getElementById('opticalYOffset')?.value || 0).toFixed(3);
 
@@ -334,9 +415,10 @@ function generateAd() {
   // Get values from UI
   const bgColor = document.getElementById('bgColor')?.value || '#0033FF';
   const textColor = document.getElementById('textColor')?.value || '#FFFFFF';
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Inter';
+  const fontScale = parseFloat(document.getElementById('fontScale')?.value) || 1;
   const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
-  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055;
+  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.05;
 
   // Get element configs
   const intro = {
@@ -380,27 +462,27 @@ function generateAd() {
   const offerText = applyTransform(offer.text, offer.transform);
   const legendText = applyTransform(legend.text, legend.transform);
 
-  // Calculate font sizes (all as % of canvas height)
+  // Calculate font sizes (all as % of canvas height, scaled by fontScale)
   const maxTextWidth = width * 0.88;
-  const introFontSize = fitText(exportCtx, introText, maxTextWidth, height * intro.size, intro.weight, fontFamily, letterSpacing);
-  const headline1FontSize = fitText(exportCtx, headlineText1, maxTextWidth, height * headline.size, headline.weight, fontFamily, letterSpacing);
-  const headline2FontSize = fitText(exportCtx, headlineText2, maxTextWidth, height * headline.size, headline.weight, fontFamily, letterSpacing);
-  const offerFontSize = fitText(exportCtx, offerText, maxTextWidth, height * offer.size, offer.weight, fontFamily, letterSpacing);
-  const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, height * legend.size, legend.weight, fontFamily, letterSpacing);
+  const introFontSize = fitText(exportCtx, introText, maxTextWidth, height * intro.size * fontScale, intro.weight, fontFamily, letterSpacing);
+  const headline1FontSize = fitText(exportCtx, headlineText1, maxTextWidth, height * headline.size * fontScale, headline.weight, fontFamily, letterSpacing);
+  const headline2FontSize = fitText(exportCtx, headlineText2, maxTextWidth, height * headline.size * fontScale, headline.weight, fontFamily, letterSpacing);
+  const offerFontSize = fitText(exportCtx, offerText, maxTextWidth, height * offer.size * fontScale, offer.weight, fontFamily, letterSpacing);
+  const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, height * legend.size * fontScale, legend.weight, fontFamily, letterSpacing);
 
-  // Build elements array
+  // Build elements array (margins and line heights also scaled)
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    const marginTop = height * intro.marginTop;
+    const marginTop = height * intro.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: introText, fontSize: introFontSize, weight: intro.weight, marginTop });
     contentHeight += introFontSize;
   }
 
   if (headlineText1) {
-    const marginTop = height * headline.marginTop;
+    const marginTop = height * headline.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: headline.weight, marginTop });
     contentHeight += headline1FontSize;
@@ -414,14 +496,14 @@ function generateAd() {
   }
 
   if (offerText) {
-    const marginTop = height * offer.marginTop;
+    const marginTop = height * offer.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: offerText, fontSize: offerFontSize, weight: offer.weight, marginTop });
     contentHeight += offerFontSize;
   }
 
   if (legendText) {
-    const marginTop = height * legend.marginTop;
+    const marginTop = height * legend.marginTop * fontScale;
     contentHeight += marginTop;
     elements.push({ text: legendText, fontSize: legendFontSize, weight: legend.weight, marginTop });
     contentHeight += legendFontSize;
@@ -541,8 +623,8 @@ function downloadAd() {
 
 function resetDefaults() {
   loadDefaults();
-  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.size-btn[data-w="1200"][data-h="628"]')?.classList.add('active');
+  document.getElementById('sizePlatform').value = 'reddit';
+  renderSizeList('reddit');
   generateAd();
 }
 
@@ -741,49 +823,45 @@ async function generateWithAI() {
         max_tokens: 4096,
         messages: [{
           role: 'user',
-          content: `You are an expert performance ad copywriter specializing in high-velocity social ads for WordPress developers and technical operators.
-## Audience Profile
-Write specifically for:
-- WordPress developers and site maintainers
-- WooCommerce store owners with bandwidth pain
-- Agencies managing many WordPress installs
-- Performance-focused engineers familiar with CDNs
-- Users who avoid DNS changes and fear breaking production
+          content: `You are an expert performance ad copywriter. Your copy is emotional, not rational. Research shows emotional ads succeed 2x more than feature-focused ones (31% vs 16%).
 
-These users value: clarity, speed, control, cost reduction, and zero-risk changes.
+## Core Principle: Emotion Over Features
+- Don't say what the product does — say how it makes them FEEL
+- Speak to identity: "Who am I if I use this?"
+- Tap into desires (freedom, control, status) and fears (missing out, falling behind, wasting time)
+- Features inform, emotions convert
 
-## Context
-- Platforms: Reddit, X
-- Visual: Bold white text on solid #0033FF blue
-- Scan time: 0.6 seconds — copy must resolve instantly
-- Goal: Stop the scroll → communicate value → drive installs/signups
-
-## Design Constraints
-The ad has a strict visual hierarchy:
-1. INTRO (top) — Who is this for? A short qualifier that makes the right person stop.
-2. HEADLINE (center, dominant) — The value punch. Two lines, stacked. This is 50% of visual weight.
-3. OFFER (below headline) — The CTA or key differentiator. Uppercase, bold.
-4. LEGEND (bottom, small) — Credibility signal. Quiet, trustworthy.
+## The Four Voices (Visual Hierarchy)
+1. INTRO (Whisper) — Identity qualifier. Makes the right person stop and self-select. Examples: "For Creators", "Finally", "Tired of X?"
+2. HEADLINE (Shout) — Emotional hook. The promise, the dream. Two lines that hit hard. This is 50% of visual weight.
+3. OFFER (Speak) — Clear value, low friction. What they get, why now. Action-oriented.
+4. LEGEND (Murmur) — Trust signal. Removes anxiety. "No credit card", "Cancel anytime", social proof.
 
 ## Copy Rules
-- Lead with value (speed, savings, simplicity)
-- Use numbers when helpful (100GB, 0 DNS changes)
-- Use short, punchy words — devs hate fluff
-- Avoid marketing tone; write like a performance engineer
-- Intros can be questions; headlines must be statements
-- Offer answers: "What's the upside?" or "What's the catch?"
-- Legend adds credibility without selling
+- Lead with emotional outcomes, not features
+- Use contrast: "More X, Less Y" / "Do X, Without Y"
+- Numbers build credibility (100GB, 10,000+ users, 14 days free)
+- Short, punchy words — no fluff, no jargon
+- Intros can be questions or identity labels
+- Headlines must be statements that evoke feeling
+- Offers answer: "What do I get?" and "What's the catch?"
+- Legends remove the last objection
+
+## Context
+- Platforms: Reddit, social feeds
+- Scan time: 0.6 seconds — copy must resolve instantly
+- Goal: Stop scroll → emotional connection → action
 
 ## Brief from user:
 ${prompt}
 
 ## Output format
-Generate 5-8 variations. Each variation must have:
-- intro: 1-3 words (qualifier)
-- headline1: 2-4 words (first line)
+Generate 5-8 variations exploring different emotional angles (aspiration, fear, belonging, control, simplicity). Each variation must have:
+- intro: 1-3 words (identity/qualifier)
+- headline1: 2-4 words (first line of emotional hook)
 - headline2: 1-3 words (punch line)
-- offer: 2-4 words, uppercase-friendly
-- legend: 3-5 words (trust signal)
+- offer: 2-5 words (value + action)
+- legend: 3-6 words (trust/friction removal)
 
 Return ONLY a JSON array, no other text:
 [{"intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..."}, ...]`
@@ -1022,6 +1100,7 @@ function loadDefaults() {
 
   // Typography
   document.getElementById('fontFamily').value = CONFIG.typography.fontFamily;
+  document.getElementById('fontScale').value = CONFIG.typography.fontScale;
   document.getElementById('letterSpacing').value = CONFIG.typography.letterSpacing;
   document.getElementById('opticalYOffset').value = CONFIG.typography.opticalYOffset;
 
