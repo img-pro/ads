@@ -101,11 +101,11 @@ function resetToFontPreset() {
 // TAB NAVIGATION
 // ==========================================
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const tabId = btn.dataset.tab;
 
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));

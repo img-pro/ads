@@ -14,55 +14,31 @@
   <!-- Top Toolbar -->
   <div class="toolbar">
     <div class="toolbar-brand">
-      <div class="toolbar-logo">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-      </div>
       <span class="toolbar-title">Ad Studio</span>
     </div>
-    <div class="toolbar-divider"></div>
 
     <!-- Tab Navigation -->
-    <div class="toolbar-tabs">
-      <button class="tab-btn active" data-tab="builder">Builder</button>
-      <button class="tab-btn" data-tab="data">Data</button>
-    </div>
+    <nav class="toolbar-nav">
+      <button class="nav-btn active" data-tab="builder">Builder</button>
+      <button class="nav-btn" data-tab="data">Data</button>
+      <div class="nav-indicator"></div>
+    </nav>
 
     <div class="toolbar-spacer"></div>
 
     <!-- Builder toolbar items -->
     <div class="toolbar-builder-items">
-      <button class="toolbar-btn" onclick="resetDefaults()">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        Reset
-      </button>
+      <button class="toolbar-btn" onclick="resetDefaults()">Reset</button>
       <span class="toolbar-dims" id="canvasDims">1200 × 628</span>
-      <div class="toolbar-divider"></div>
-      <div class="theme-picker">
-        <button class="theme-dot" data-accent="default" title="Indigo"></button>
-        <button class="theme-dot" data-accent="blue" title="Blue"></button>
-        <button class="theme-dot" data-accent="teal" title="Teal"></button>
-        <button class="theme-dot" data-accent="purple" title="Purple"></button>
-        <button class="theme-dot" data-accent="pink" title="Pink"></button>
-        <button class="theme-dot" data-accent="orange" title="Orange"></button>
-      </div>
-      <div class="toolbar-divider"></div>
-      <button class="toolbar-btn primary" onclick="downloadAd()">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export PNG
-      </button>
+      <button class="toolbar-btn primary" onclick="downloadAd()">Export PNG</button>
     </div>
 
     <!-- Data toolbar items -->
     <div class="toolbar-data-items" style="display: none;">
       <button class="toolbar-btn" onclick="openApiKeyModal()">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        <span id="apiKeyStatus">Set API Key</span>
+        <span id="apiKeyStatus">API Key</span>
       </button>
-      <div class="toolbar-divider"></div>
-      <button class="toolbar-btn primary" onclick="exportAllAds()">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export ZIP
-      </button>
+      <button class="toolbar-btn primary" onclick="exportAllAds()">Export ZIP</button>
     </div>
   </div>
 
