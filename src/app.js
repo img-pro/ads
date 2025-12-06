@@ -5,6 +5,9 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+// Reference CONFIG from config.js (loaded before app.js)
+const fontPresets = CONFIG.fontPresets;
+
 // ==========================================
 // TAB NAVIGATION
 // ==========================================
@@ -40,137 +43,182 @@ function toggleTextBlock(header) {
 }
 
 // ==========================================
-// GLOBAL DEFAULTS & FONT PRESETS
+// LOAD SAVED PRESETS FROM LOCALSTORAGE
 // ==========================================
 
-const globalDefaults = {
-  width: 1200,
-  height: 628,
-  bgColor: '#0033FF',
-  textColor: '#FFFFFF',
-  introText: 'WordPress User?',
-  headlineText1: 'Stop Paying for',
-  headlineText2: 'Bandwidth',
-  offerText: 'FREE: 100 GB / Mo',
-  legendText: 'Cloudflare-level speed without touching DNS'
-};
+// Load custom presets from localStorage
+(function loadSavedPresets() {
+  const savedPresets = JSON.parse(localStorage.getItem('customFontPresets') || '{}');
+  Object.keys(savedPresets).forEach(fontFamily => {
+    if (fontPresets[fontFamily]) {
+      fontPresets[fontFamily] = { ...fontPresets[fontFamily], ...savedPresets[fontFamily] };
+    }
+  });
+})();
 
-const fontPresets = {
-  'Bebas Neue': {
-    fontWeight: '400', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.04,
-    introSize: 0.32, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.18, offerSize: 0.55, offerWeight: '400', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'uppercase'
+// ==========================================
+// CONFIG CODE BLOCKS
+// ==========================================
+
+function updateConfigCode() {
+  updateConfigDefaults();
+  updateConfigPreset();
+}
+
+function updateConfigDefaults() {
+  const q = s => `'${s}'`; // single quote strings
+  const n = v => v; // numbers as-is
+
+  const width = parseInt(document.getElementById('width')?.value) || 1200;
+  const height = parseInt(document.getElementById('height')?.value) || 628;
+  const bgColor = document.getElementById('bgColor')?.value || '#0033FF';
+  const textColor = document.getElementById('textColor')?.value || '#FFFFFF';
+  const intro = document.getElementById('introText')?.value || '';
+  const headline1 = document.getElementById('headlineText1')?.value || '';
+  const headline2 = document.getElementById('headlineText2')?.value || '';
+  const offer = document.getElementById('offerText')?.value || '';
+  const legend = document.getElementById('legendText')?.value || '';
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
+  const fontWeight = document.getElementById('fontWeight')?.value || '700';
+  const fontStyle = document.getElementById('fontStyle')?.value || 'normal';
+  const textTransform = document.getElementById('textTransform')?.value || 'none';
+  const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
+  const introSize = parseFloat(document.getElementById('introSize')?.value) || 0;
+  const introWeight = document.getElementById('introWeight')?.value || '500';
+  const introTransform = document.getElementById('introTransform')?.value || 'none';
+  const headlineSize = parseFloat(document.getElementById('headlineSize')?.value) || 0;
+  const offerSize = parseFloat(document.getElementById('offerSize')?.value) || 0;
+  const offerWeight = document.getElementById('offerWeight')?.value || '800';
+  const offerTransform = document.getElementById('offerTransform')?.value || 'uppercase';
+  const legendSize = parseFloat(document.getElementById('legendSize')?.value) || 0;
+  const legendWeight = document.getElementById('legendWeight')?.value || '400';
+  const legendTransform = document.getElementById('legendTransform')?.value || 'none';
+  const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) || 0;
+  const introMarginTop = parseFloat(document.getElementById('spacingIntroMarginTop')?.value) || 0;
+  const headlineMarginTop = parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) || 0;
+  const headlineLineHeight = parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) || 1;
+  const offerMarginTop = parseFloat(document.getElementById('spacingOfferMarginTop')?.value) || 0;
+  const legendMarginTop = parseFloat(document.getElementById('spacingLegendMarginTop')?.value) || 0;
+
+  const output = `canvas: {
+    width: ${n(width)},
+    height: ${n(height)}
   },
-  'Anton': {
-    fontWeight: '400', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.02,
-    introSize: 0.30, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.17, offerSize: 0.52, offerWeight: '400', offerTransform: 'uppercase',
-    legendSize: 0.18, legendWeight: '400', legendTransform: 'uppercase'
+
+  colors: {
+    background: ${q(bgColor)},
+    text: ${q(textColor)}
   },
-  'Archivo Black': {
-    fontWeight: '400', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.01,
-    introSize: 0.28, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.14, offerSize: 0.48, offerWeight: '400', offerTransform: 'uppercase',
-    legendSize: 0.18, legendWeight: '400', legendTransform: 'none'
+
+  content: {
+    intro: ${q(intro)},
+    headline1: ${q(headline1)},
+    headline2: ${q(headline2)},
+    offer: ${q(offer)},
+    legend: ${q(legend)}
   },
-  'Oswald': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.02,
-    introSize: 0.32, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.16, offerSize: 0.55, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'none'
+
+  typography: {
+    fontFamily: ${q(fontFamily)},
+    fontWeight: ${q(fontWeight)},
+    fontStyle: ${q(fontStyle)},
+    textTransform: ${q(textTransform)},
+    letterSpacing: ${n(letterSpacing)},
+    introSize: ${n(introSize)},
+    introWeight: ${q(introWeight)},
+    introTransform: ${q(introTransform)},
+    headlineSize: ${n(headlineSize)},
+    offerSize: ${n(offerSize)},
+    offerWeight: ${q(offerWeight)},
+    offerTransform: ${q(offerTransform)},
+    legendSize: ${n(legendSize)},
+    legendWeight: ${q(legendWeight)},
+    legendTransform: ${q(legendTransform)}
   },
-  'Barlow Condensed': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.03,
-    introSize: 0.34, introWeight: '500', introTransform: 'uppercase',
-    headlineSize: 0.18, offerSize: 0.58, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Inter': {
-    fontWeight: '800', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.025,
-    introSize: 0.40, introWeight: '600', introTransform: 'none',
-    headlineSize: 0.17, offerSize: 0.70, offerWeight: '900', offerTransform: 'uppercase',
-    legendSize: 0.23, legendWeight: '400', legendTransform: 'none'
-  },
-  'Montserrat': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.01,
-    introSize: 0.35, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.14, offerSize: 0.60, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'none'
-  },
-  'Poppins': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.01,
-    introSize: 0.36, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.14, offerSize: 0.58, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'none'
-  },
-  'Space Grotesk': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.02,
-    introSize: 0.36, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.62, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'DM Sans': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.01,
-    introSize: 0.36, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.60, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Raleway': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0.01,
-    introSize: 0.34, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.14, offerSize: 0.58, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'none'
-  },
-  'Roboto': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0,
-    introSize: 0.36, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.60, offerWeight: '900', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Open Sans': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0,
-    introSize: 0.36, introWeight: '500', introTransform: 'none',
-    headlineSize: 0.14, offerSize: 0.58, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Lato': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0.01,
-    introSize: 0.36, introWeight: '400', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.60, offerWeight: '900', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Playfair Display': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0,
-    introSize: 0.32, introWeight: '400', introTransform: 'none',
-    headlineSize: 0.14, offerSize: 0.55, offerWeight: '800', offerTransform: 'uppercase',
-    legendSize: 0.20, legendWeight: '400', legendTransform: 'none'
-  },
-  'Helvetica': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: -0.01,
-    introSize: 0.36, introWeight: '400', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.62, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
-  },
-  'Impact': {
-    fontWeight: '400', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.02,
-    introSize: 0.30, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.16, offerSize: 0.50, offerWeight: '400', offerTransform: 'uppercase',
-    legendSize: 0.18, legendWeight: '400', legendTransform: 'uppercase'
-  },
-  'Arial Black': {
-    fontWeight: '400', fontStyle: 'normal', textTransform: 'uppercase', letterSpacing: 0.01,
-    introSize: 0.28, introWeight: '400', introTransform: 'uppercase',
-    headlineSize: 0.13, offerSize: 0.45, offerWeight: '400', offerTransform: 'uppercase',
-    legendSize: 0.18, legendWeight: '400', legendTransform: 'none'
-  },
-  'Arial': {
-    fontWeight: '700', fontStyle: 'normal', textTransform: 'none', letterSpacing: 0,
-    introSize: 0.36, introWeight: '400', introTransform: 'none',
-    headlineSize: 0.15, offerSize: 0.60, offerWeight: '700', offerTransform: 'uppercase',
-    legendSize: 0.22, legendWeight: '400', legendTransform: 'none'
+
+  spacing: {
+    opticalYOffset: ${n(opticalYOffset)},
+    intro: { marginTop: ${n(introMarginTop)} },
+    headline: { marginTop: ${n(headlineMarginTop)}, lineHeight: ${n(headlineLineHeight)} },
+    offer: { marginTop: ${n(offerMarginTop)} },
+    legend: { marginTop: ${n(legendMarginTop)} }
+  },`;
+
+  const codeEl = document.getElementById('configDefaults');
+  if (codeEl) {
+    codeEl.textContent = output;
   }
-};
+}
+
+function updateConfigPreset() {
+  const q = s => `'${s}'`; // single quote strings
+  const n = v => v; // numbers as-is
+
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
+  const fontWeight = document.getElementById('fontWeight')?.value || '700';
+  const fontStyle = document.getElementById('fontStyle')?.value || 'normal';
+  const textTransform = document.getElementById('textTransform')?.value || 'none';
+  const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
+  const introSize = parseFloat(document.getElementById('introSize')?.value) || 0;
+  const introWeight = document.getElementById('introWeight')?.value || '500';
+  const introTransform = document.getElementById('introTransform')?.value || 'none';
+  const headlineSize = parseFloat(document.getElementById('headlineSize')?.value) || 0;
+  const offerSize = parseFloat(document.getElementById('offerSize')?.value) || 0;
+  const offerWeight = document.getElementById('offerWeight')?.value || '800';
+  const offerTransform = document.getElementById('offerTransform')?.value || 'uppercase';
+  const legendSize = parseFloat(document.getElementById('legendSize')?.value) || 0;
+  const legendWeight = document.getElementById('legendWeight')?.value || '400';
+  const legendTransform = document.getElementById('legendTransform')?.value || 'none';
+
+  const output = `'${fontFamily}': {
+  fontWeight: ${q(fontWeight)},
+  fontStyle: ${q(fontStyle)},
+  textTransform: ${q(textTransform)},
+  letterSpacing: ${n(letterSpacing)},
+  introSize: ${n(introSize)},
+  introWeight: ${q(introWeight)},
+  introTransform: ${q(introTransform)},
+  headlineSize: ${n(headlineSize)},
+  offerSize: ${n(offerSize)},
+  offerWeight: ${q(offerWeight)},
+  offerTransform: ${q(offerTransform)},
+  legendSize: ${n(legendSize)},
+  legendWeight: ${q(legendWeight)},
+  legendTransform: ${q(legendTransform)}
+}`;
+
+  const codeEl = document.getElementById('configPreset');
+  if (codeEl) {
+    codeEl.textContent = output;
+  }
+}
+
+function copyConfigDefaults() {
+  const codeEl = document.getElementById('configDefaults');
+  if (codeEl && codeEl.textContent) {
+    navigator.clipboard.writeText(codeEl.textContent).then(() => {
+      showCopyFeedback(codeEl);
+    });
+  }
+}
+
+function copyConfigPreset() {
+  const codeEl = document.getElementById('configPreset');
+  if (codeEl && codeEl.textContent) {
+    navigator.clipboard.writeText(codeEl.textContent).then(() => {
+      showCopyFeedback(codeEl);
+    });
+  }
+}
+
+function showCopyFeedback(codeEl) {
+  const btn = codeEl.nextElementSibling;
+  if (btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Copied';
+    setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+  }
+}
 
 // ==========================================
 // TYPOGRAPHY OVERRIDES
@@ -210,6 +258,31 @@ function resetTypography() {
   overrides.clear();
   applyFontPreset();
   generateAd();
+}
+
+function saveAsFontDefault() {
+  const fontFamily = document.getElementById('fontFamily').value;
+  const newPreset = {};
+
+  typographyFields.forEach(field => {
+    const el = document.getElementById(field);
+    if (el) {
+      const value = el.value;
+      // Convert numeric strings to numbers
+      newPreset[field] = isNaN(value) ? value : parseFloat(value);
+    }
+  });
+
+  // Update the in-memory preset
+  fontPresets[fontFamily] = { ...fontPresets[fontFamily], ...newPreset };
+
+  // Save to localStorage for persistence
+  const savedPresets = JSON.parse(localStorage.getItem('customFontPresets') || '{}');
+  savedPresets[fontFamily] = newPreset;
+  localStorage.setItem('customFontPresets', JSON.stringify(savedPresets));
+
+  // Clear overrides since these are now the defaults
+  overrides.clear();
 }
 
 // ==========================================
@@ -284,6 +357,20 @@ function updateDisplays() {
   if (letterSpacingVal) letterSpacingVal.textContent = Math.round(parseFloat(document.getElementById('letterSpacing')?.value || 0) * 100) + '%';
   if (canvasDims) canvasDims.textContent = `${w} × ${h}`;
   if (canvasInfo) canvasInfo.textContent = `${w} × ${h} px`;
+
+  // Spacing displays
+  const spacingOpticalYOffsetVal = document.getElementById('spacingOpticalYOffsetVal');
+  if (spacingOpticalYOffsetVal) spacingOpticalYOffsetVal.textContent = parseFloat(document.getElementById('spacingOpticalYOffset')?.value || 0).toFixed(3);
+
+  // Per-element spacing displays
+  ['Intro', 'Headline', 'Offer', 'Legend'].forEach(el => {
+    const marginTopVal = document.getElementById(`spacing${el}MarginTopVal`);
+    if (marginTopVal) marginTopVal.textContent = parseFloat(document.getElementById(`spacing${el}MarginTop`)?.value || 0).toFixed(2) + '×';
+  });
+
+  // Headline lineHeight (only multi-line element)
+  const headlineLineHeightVal = document.getElementById('spacingHeadlineLineHeightVal');
+  if (headlineLineHeightVal) headlineLineHeightVal.textContent = parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value || 1).toFixed(2);
 }
 
 // ==========================================
@@ -392,41 +479,59 @@ function generateAd() {
   const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, legendSize,
     legendWeight !== 'normal' ? legendWeight : globalWeight, globalStyle, fontFamily, letterSpacing);
 
-  const gapIntroToHeadline = baseHeadlineSize * 0.27;
-  const gapHeadlineLines = baseHeadlineSize * 0.07;
-  const gapHeadlineToOffer = baseHeadlineSize * 0.70;
-  const gapOfferToLegend = baseHeadlineSize * 0.42;
+  // Per-element spacing
+  const spacing = {
+    intro: {
+      marginTop: parseFloat(document.getElementById('spacingIntroMarginTop')?.value) ?? CONFIG.spacing.intro.marginTop
+    },
+    headline: {
+      marginTop: parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) ?? CONFIG.spacing.headline.marginTop,
+      lineHeight: parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) ?? CONFIG.spacing.headline.lineHeight
+    },
+    offer: {
+      marginTop: parseFloat(document.getElementById('spacingOfferMarginTop')?.value) ?? CONFIG.spacing.offer.marginTop
+    },
+    legend: {
+      marginTop: parseFloat(document.getElementById('spacingLegendMarginTop')?.value) ?? CONFIG.spacing.legend.marginTop
+    }
+  };
 
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    elements.push({ type: 'intro', text: introText, fontSize: introFontSize, weight: introWeight !== 'normal' ? introWeight : globalWeight });
+    const marginTop = baseHeadlineSize * spacing.intro.marginTop;
+    contentHeight += marginTop;
+    elements.push({ type: 'intro', text: introText, fontSize: introFontSize, weight: introWeight !== 'normal' ? introWeight : globalWeight, marginTop });
     contentHeight += introFontSize;
-    if (headlineText1 || headlineText2) contentHeight += gapIntroToHeadline;
   }
 
   if (headlineText1) {
-    elements.push({ type: 'headline1', text: headlineText1, fontSize: headline1FontSize, weight: globalWeight });
+    const marginTop = baseHeadlineSize * spacing.headline.marginTop;
+    contentHeight += marginTop;
+    elements.push({ type: 'headline1', text: headlineText1, fontSize: headline1FontSize, weight: globalWeight, marginTop });
     contentHeight += headline1FontSize;
   }
 
   if (headlineText2) {
-    if (headlineText1) contentHeight += gapHeadlineLines;
-    elements.push({ type: 'headline2', text: headlineText2, fontSize: headline2FontSize, weight: globalWeight });
+    // Second headline line uses lineHeight instead of marginTop
+    const lineGap = headline1FontSize * (spacing.headline.lineHeight - 1);
+    contentHeight += lineGap;
+    elements.push({ type: 'headline2', text: headlineText2, fontSize: headline2FontSize, weight: globalWeight, marginTop: lineGap });
     contentHeight += headline2FontSize;
   }
 
   if (offerText) {
-    if (headlineText1 || headlineText2) contentHeight += gapHeadlineToOffer;
-    elements.push({ type: 'offer', text: offerText, fontSize: offerFontSize, weight: offerWeight });
+    const marginTop = baseHeadlineSize * spacing.offer.marginTop;
+    contentHeight += marginTop;
+    elements.push({ type: 'offer', text: offerText, fontSize: offerFontSize, weight: offerWeight, marginTop });
     contentHeight += offerFontSize;
   }
 
   if (legendText) {
-    if (offerText) contentHeight += gapOfferToLegend;
-    else if (headlineText1 || headlineText2) contentHeight += gapHeadlineToOffer;
-    elements.push({ type: 'legend', text: legendText, fontSize: legendFontSize, weight: legendWeight !== 'normal' ? legendWeight : globalWeight });
+    const marginTop = baseHeadlineSize * spacing.legend.marginTop;
+    contentHeight += marginTop;
+    elements.push({ type: 'legend', text: legendText, fontSize: legendFontSize, weight: legendWeight !== 'normal' ? legendWeight : globalWeight, marginTop });
     contentHeight += legendFontSize;
   }
 
@@ -437,27 +542,31 @@ function generateAd() {
     targetCtx.fillStyle = bgColor;
     targetCtx.fillRect(0, 0, width, height);
 
-    const opticalOffset = height * 0.04;
+    const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) || CONFIG.spacing.opticalYOffset;
+    const opticalOffset = height * opticalYOffset;
     let currentY = (height - contentHeight) / 2 - opticalOffset;
 
     targetCtx.fillStyle = textColor;
     targetCtx.textAlign = 'center';
     targetCtx.textBaseline = 'top';
 
-    elements.forEach((el, index) => {
+    elements.forEach((el) => {
+      // Apply marginTop before drawing
+      currentY += el.marginTop;
+
       targetCtx.font = `${globalStyle} ${el.weight} ${el.fontSize}px "${fontFamily}"`;
 
       if (letterSpacing !== 0) {
-        const spacing = el.fontSize * letterSpacing;
+        const charSpacing = el.fontSize * letterSpacing;
         const text = el.text;
         if (text) {
-          const totalWidth = targetCtx.measureText(text).width + (text.length - 1) * spacing;
+          const totalWidth = targetCtx.measureText(text).width + (text.length - 1) * charSpacing;
           let charX = width / 2 - totalWidth / 2;
           for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const charWidth = targetCtx.measureText(char).width;
             targetCtx.fillText(char, charX + charWidth / 2, currentY);
-            charX += charWidth + spacing;
+            charX += charWidth + charSpacing;
           }
         }
       } else {
@@ -465,13 +574,6 @@ function generateAd() {
       }
 
       currentY += el.fontSize;
-
-      const next = elements[index + 1];
-      if (el.type === 'intro' && next) currentY += gapIntroToHeadline;
-      else if (el.type === 'headline1' && next?.type === 'headline2') currentY += gapHeadlineLines;
-      else if ((el.type === 'headline1' || el.type === 'headline2') && next?.type === 'offer') currentY += gapHeadlineToOffer;
-      else if ((el.type === 'headline1' || el.type === 'headline2') && next?.type === 'legend') currentY += gapHeadlineToOffer;
-      else if (el.type === 'offer' && next?.type === 'legend') currentY += gapOfferToLegend;
     });
 
     targetCtx.restore();
@@ -479,6 +581,7 @@ function generateAd() {
 
   render(ctx, dpr);
   render(exportCtx, 1);
+  updateConfigCode();
 }
 
 // ==========================================
@@ -756,20 +859,53 @@ async function generateWithAI() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 4096,
         messages: [{
           role: 'user',
-          content: `You are an expert ad copywriter. Generate ad copy variations based on this brief:
+          content: `You are an expert performance ad copywriter specializing in high-velocity social ads for WordPress developers and technical operators.
+## Audience Profile
+Write specifically for:
+- WordPress developers and site maintainers
+- WooCommerce store owners with bandwidth pain
+- Agencies managing many WordPress installs
+- Performance-focused engineers familiar with CDNs
+- Users who avoid DNS changes and fear breaking production
 
+These users value: clarity, speed, control, cost reduction, and zero-risk changes.
+
+## Context
+- Platforms: Reddit, X
+- Visual: Bold white text on solid #0033FF blue
+- Scan time: 0.6 seconds — copy must resolve instantly
+- Goal: Stop the scroll → communicate value → drive installs/signups
+
+## Design Constraints
+The ad has a strict visual hierarchy:
+1. INTRO (top) — Who is this for? A short qualifier that makes the right person stop.
+2. HEADLINE (center, dominant) — The value punch. Two lines, stacked. This is 50% of visual weight.
+3. OFFER (below headline) — The CTA or key differentiator. Uppercase, bold.
+4. LEGEND (bottom, small) — Credibility signal. Quiet, trustworthy.
+
+## Copy Rules
+- Lead with value (speed, savings, simplicity)
+- Use numbers when helpful (100GB, 0 DNS changes)
+- Use short, punchy words — devs hate fluff
+- Avoid marketing tone; write like a performance engineer
+- Intros can be questions; headlines must be statements
+- Offer answers: “What’s the upside?” or “What’s the catch?”
+- Legend adds credibility without selling
+
+## Brief from user:
 ${prompt}
 
-Generate variations in JSON format. Each variation should have:
-- intro: A short qualifier/hook (2-4 words, e.g., "WordPress User?", "Slow Website?")
-- headline1: First line of headline (3-5 words)
-- headline2: Second line of headline (1-3 words, the punch)
-- offer: The CTA/offer (3-6 words, e.g., "FREE: 100 GB / Mo", "Try Free for 30 Days")
-- legend: Fine print/supporting text (5-10 words)
+## Output format
+Generate 5-8 variations. Each variation must have:
+- intro: 1-3 words (qualifier)
+- headline1: 2-4 words (first line)
+- headline2: 1-3 words (punch line)
+- offer: 2-4 words, uppercase-friendly
+- legend: 3-5 words (trust signal)
 
 Return ONLY a JSON array, no other text:
 [{"intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..."}, ...]`
@@ -912,37 +1048,54 @@ async function renderAdToDataUrl(row, template, width, height) {
   const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, baseHeadlineSize * template.legendSize,
     template.legendWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
 
-  const gapIntroToHeadline = baseHeadlineSize * 0.27;
-  const gapHeadlineLines = baseHeadlineSize * 0.07;
-  const gapHeadlineToOffer = baseHeadlineSize * 0.70;
-  const gapOfferToLegend = baseHeadlineSize * 0.42;
+  // Per-element spacing
+  const spacing = {
+    intro: {
+      marginTop: parseFloat(document.getElementById('spacingIntroMarginTop')?.value) ?? CONFIG.spacing.intro.marginTop
+    },
+    headline: {
+      marginTop: parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) ?? CONFIG.spacing.headline.marginTop,
+      lineHeight: parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) ?? CONFIG.spacing.headline.lineHeight
+    },
+    offer: {
+      marginTop: parseFloat(document.getElementById('spacingOfferMarginTop')?.value) ?? CONFIG.spacing.offer.marginTop
+    },
+    legend: {
+      marginTop: parseFloat(document.getElementById('spacingLegendMarginTop')?.value) ?? CONFIG.spacing.legend.marginTop
+    }
+  };
 
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    elements.push({ text: introText, fontSize: introFontSize, weight: template.introWeight, type: 'intro' });
+    const marginTop = baseHeadlineSize * spacing.intro.marginTop;
+    contentHeight += marginTop;
+    elements.push({ text: introText, fontSize: introFontSize, weight: template.introWeight, type: 'intro', marginTop });
     contentHeight += introFontSize;
-    if (headlineText1 || headlineText2) contentHeight += gapIntroToHeadline;
   }
   if (headlineText1) {
-    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.fontWeight, type: 'headline1' });
+    const marginTop = baseHeadlineSize * spacing.headline.marginTop;
+    contentHeight += marginTop;
+    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.fontWeight, type: 'headline1', marginTop });
     contentHeight += headline1FontSize;
   }
   if (headlineText2) {
-    if (headlineText1) contentHeight += gapHeadlineLines;
-    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: template.fontWeight, type: 'headline2' });
+    const lineGap = headline1FontSize * (spacing.headline.lineHeight - 1);
+    contentHeight += lineGap;
+    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: template.fontWeight, type: 'headline2', marginTop: lineGap });
     contentHeight += headline2FontSize;
   }
   if (offerText) {
-    if (headlineText1 || headlineText2) contentHeight += gapHeadlineToOffer;
-    elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offerWeight, type: 'offer' });
+    const marginTop = baseHeadlineSize * spacing.offer.marginTop;
+    contentHeight += marginTop;
+    elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offerWeight, type: 'offer', marginTop });
     contentHeight += offerFontSize;
   }
   if (legendText) {
-    if (offerText) contentHeight += gapOfferToLegend;
-    else if (headlineText1 || headlineText2) contentHeight += gapHeadlineToOffer;
-    elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legendWeight, type: 'legend' });
+    const marginTop = baseHeadlineSize * spacing.legend.marginTop;
+    contentHeight += marginTop;
+    elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legendWeight, type: 'legend', marginTop });
     contentHeight += legendFontSize;
   }
 
@@ -950,38 +1103,34 @@ async function renderAdToDataUrl(row, template, width, height) {
   tempCtx.fillStyle = template.bgColor;
   tempCtx.fillRect(0, 0, width, height);
 
-  const opticalOffset = height * 0.04;
+  const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) ?? CONFIG.spacing.opticalYOffset;
+  const opticalOffset = height * opticalYOffset;
   let currentY = (height - contentHeight) / 2 - opticalOffset;
 
   tempCtx.fillStyle = template.textColor;
   tempCtx.textAlign = 'center';
   tempCtx.textBaseline = 'top';
 
-  elements.forEach((el, index) => {
+  elements.forEach((el) => {
+    currentY += el.marginTop;
+
     tempCtx.font = `${template.fontStyle} ${el.weight} ${el.fontSize}px "${template.fontFamily}"`;
 
     if (template.letterSpacing !== 0) {
-      const spacing = el.fontSize * template.letterSpacing;
-      const totalWidth = tempCtx.measureText(el.text).width + (el.text.length - 1) * spacing;
+      const charSpacing = el.fontSize * template.letterSpacing;
+      const totalWidth = tempCtx.measureText(el.text).width + (el.text.length - 1) * charSpacing;
       let charX = width / 2 - totalWidth / 2;
       for (let i = 0; i < el.text.length; i++) {
         const char = el.text[i];
         const charWidth = tempCtx.measureText(char).width;
         tempCtx.fillText(char, charX + charWidth / 2, currentY);
-        charX += charWidth + spacing;
+        charX += charWidth + charSpacing;
       }
     } else {
       tempCtx.fillText(el.text, width / 2, currentY);
     }
 
     currentY += el.fontSize;
-
-    const next = elements[index + 1];
-    if (el.type === 'intro' && next) currentY += gapIntroToHeadline;
-    else if (el.type === 'headline1' && next?.type === 'headline2') currentY += gapHeadlineLines;
-    else if ((el.type === 'headline1' || el.type === 'headline2') && next?.type === 'offer') currentY += gapHeadlineToOffer;
-    else if ((el.type === 'headline1' || el.type === 'headline2') && next?.type === 'legend') currentY += gapHeadlineToOffer;
-    else if (el.type === 'offer' && next?.type === 'legend') currentY += gapOfferToLegend;
   });
 
   const effectiveDpi = 72 * dpr;
@@ -992,6 +1141,54 @@ async function renderAdToDataUrl(row, template, width, height) {
 // INITIALIZATION
 // ==========================================
 
+function loadDefaults() {
+  // Canvas size
+  document.getElementById('width').value = CONFIG.canvas.width;
+  document.getElementById('height').value = CONFIG.canvas.height;
+
+  // Colors
+  document.getElementById('bgColor').value = CONFIG.colors.background;
+  document.getElementById('bgColorPicker').value = CONFIG.colors.background;
+  document.getElementById('textColor').value = CONFIG.colors.text;
+  document.getElementById('textColorPicker').value = CONFIG.colors.text;
+
+  // Content
+  document.getElementById('introText').value = CONFIG.content.intro;
+  document.getElementById('headlineText1').value = CONFIG.content.headline1;
+  document.getElementById('headlineText2').value = CONFIG.content.headline2;
+  document.getElementById('offerText').value = CONFIG.content.offer;
+  document.getElementById('legendText').value = CONFIG.content.legend;
+
+  // Typography
+  const t = CONFIG.typography;
+  document.getElementById('fontFamily').value = t.fontFamily;
+  document.getElementById('fontWeight').value = t.fontWeight;
+  document.getElementById('fontStyle').value = t.fontStyle;
+  document.getElementById('textTransform').value = t.textTransform;
+  document.getElementById('letterSpacing').value = t.letterSpacing;
+  document.getElementById('introSize').value = t.introSize;
+  document.getElementById('introWeight').value = t.introWeight;
+  document.getElementById('introTransform').value = t.introTransform;
+  document.getElementById('headlineSize').value = t.headlineSize;
+  document.getElementById('offerSize').value = t.offerSize;
+  document.getElementById('offerWeight').value = t.offerWeight;
+  document.getElementById('offerTransform').value = t.offerTransform;
+  document.getElementById('legendSize').value = t.legendSize;
+  document.getElementById('legendWeight').value = t.legendWeight;
+  document.getElementById('legendTransform').value = t.legendTransform;
+
+  // Spacing
+  const s = CONFIG.spacing;
+  document.getElementById('spacingOpticalYOffset').value = s.opticalYOffset;
+  document.getElementById('spacingIntroMarginTop').value = s.intro.marginTop;
+  document.getElementById('spacingHeadlineMarginTop').value = s.headline.marginTop;
+  document.getElementById('spacingHeadlineLineHeight').value = s.headline.lineHeight;
+  document.getElementById('spacingOfferMarginTop').value = s.offer.marginTop;
+  document.getElementById('spacingLegendMarginTop').value = s.legend.marginTop;
+}
+
+// Initialize
+loadDefaults();
 updateApiKeyStatus();
 renderDataTable();
 document.fonts.ready.then(() => generateAd());
