@@ -9,23 +9,9 @@ const ctx = canvas.getContext('2d');
 // FONT PRESETS
 // ==========================================
 
-// In-memory presets (starts from CONFIG, can be modified at runtime)
-const fontPresets = { ...CONFIG.fontPresets };
-
-// Load any saved custom presets from localStorage
-(function loadSavedPresets() {
-  const saved = JSON.parse(localStorage.getItem('fontPresets') || '{}');
-  Object.assign(fontPresets, saved);
-})();
-
-// Get preset for current font (returns undefined if none exists)
-function getFontPreset(fontFamily) {
-  return fontPresets[fontFamily];
-}
-
-// Apply preset to UI (only styling, not text content or margins)
+// Apply preset to UI when font changes (only styling, not text content or margins)
 function applyFontPreset(fontFamily) {
-  const preset = getFontPreset(fontFamily);
+  const preset = CONFIG.fontPresets?.[fontFamily];
   if (!preset) return;
 
   ['intro', 'headline', 'offer', 'legend'].forEach(el => {
@@ -48,53 +34,6 @@ function applyFontPreset(fontFamily) {
       if (lhEl) lhEl.value = p.lineHeight;
     }
   });
-}
-
-// Save current styling as preset for the current font
-function saveAsFontPreset() {
-  const fontFamily = document.getElementById('fontFamily')?.value;
-  if (!fontFamily) return;
-
-  const preset = {};
-  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
-    preset[el] = {
-      size: parseFloat(document.getElementById(`${el}Size`)?.value) || 0,
-      weight: document.getElementById(`${el}Weight`)?.value || '400',
-      transform: document.getElementById(`${el}Transform`)?.value || 'none'
-    };
-    if (el === 'headline') {
-      preset[el].lineHeight = parseFloat(document.getElementById('headlineLineHeight')?.value) || 1;
-    }
-  });
-
-  fontPresets[fontFamily] = preset;
-
-  // Persist to localStorage
-  const saved = JSON.parse(localStorage.getItem('fontPresets') || '{}');
-  saved[fontFamily] = preset;
-  localStorage.setItem('fontPresets', JSON.stringify(saved));
-}
-
-// Reset to font preset (if exists) or CONFIG defaults
-function resetToFontPreset() {
-  const fontFamily = document.getElementById('fontFamily')?.value;
-  const preset = getFontPreset(fontFamily);
-
-  if (preset) {
-    applyFontPreset(fontFamily);
-  } else {
-    // Fall back to CONFIG.elements defaults
-    const e = CONFIG.elements;
-    ['intro', 'headline', 'offer', 'legend'].forEach(el => {
-      document.getElementById(`${el}Size`).value = e[el].size;
-      document.getElementById(`${el}Weight`).value = e[el].weight;
-      document.getElementById(`${el}Transform`).value = e[el].transform;
-      if (el === 'headline') {
-        document.getElementById('headlineLineHeight').value = e[el].lineHeight;
-      }
-    });
-  }
-  generateAd();
 }
 
 // ==========================================
