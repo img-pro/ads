@@ -13,57 +13,52 @@ const CONFIG = {
     text: '#FFFFFF'
   },
 
-  content: {
-    intro: 'Bandwidth Saver',
-    headline1: 'Stop Overpaying',
-    headline2: 'for Bandwidth',
-    offer: 'Free: 100GB /mo',
-    legend: 'Cloudflare speed without touching DNS'
-  },
-
   typography: {
     fontFamily: 'Helvetica',
-    fontWeight: '700',
-    fontStyle: 'normal',
-    textTransform: 'uppercase',
     letterSpacing: 0,
-    introSize: 0.38,
-    introWeight: '500',
-    introTransform: 'uppercase',
-    headlineSize: 0.16,
-    offerSize: 0.68,
-    offerWeight: '800',
-    offerTransform: 'uppercase',
-    legendSize: 0.22,
-    legendWeight: '400',
-    legendTransform: 'none'
+    opticalYOffset: 0.055
   },
 
-  spacing: {
-    opticalYOffset: 0.055,
-    intro: { marginTop: 0 },
-    headline: { marginTop: 0.12, lineHeight: 1.05 },
-    offer: { marginTop: 0.95 },
-    legend: { marginTop: 0.38 }
+  elements: {
+    intro: {
+      text: 'Bandwidth Saver',
+      size: 0.06,
+      weight: '500',
+      transform: 'uppercase',
+      marginTop: 0
+    },
+    headline: {
+      text: ['Stop Overpaying', 'for Bandwidth'],
+      size: 0.16,
+      weight: '700',
+      transform: 'uppercase',
+      marginTop: 0.02,
+      lineHeight: 1.05
+    },
+    offer: {
+      text: 'Free: 100GB /mo',
+      size: 0.11,
+      weight: '800',
+      transform: 'uppercase',
+      marginTop: 0.15
+    },
+    legend: {
+      text: 'Cloudflare speed without touching DNS',
+      size: 0.035,
+      weight: '400',
+      transform: 'none',
+      marginTop: 0.06
+    }
   },
 
+  // Optional: per-font presets for element styling
+  // When a font is selected, these settings auto-apply (if defined)
   fontPresets: {
     'Helvetica': {
-      category: 'System',
-      fontWeight: '700',
-      fontStyle: 'normal',
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-      introSize: 0.38,
-      introWeight: '500',
-      introTransform: 'uppercase',
-      headlineSize: 0.16,
-      offerSize: 0.68,
-      offerWeight: '800',
-      offerTransform: 'uppercase',
-      legendSize: 0.22,
-      legendWeight: '400',
-      legendTransform: 'none'
+      intro: { size: 0.06, weight: '500', transform: 'uppercase' },
+      headline: { size: 0.16, weight: '700', transform: 'uppercase', lineHeight: 1.05 },
+      offer: { size: 0.11, weight: '800', transform: 'uppercase' },
+      legend: { size: 0.035, weight: '400', transform: 'none' }
     }
   }
 };

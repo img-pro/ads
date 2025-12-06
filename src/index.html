@@ -57,7 +57,7 @@
   <!-- Builder Tab -->
   <div id="builder-tab" class="tab-content active">
     <div class="main-layout">
-      <!-- Left Panel -->
+      <!-- Left Panel: Design Controls -->
       <aside class="panel">
         <div class="panel-content">
           <!-- Canvas Size -->
@@ -139,11 +139,11 @@
             </div>
             <div class="section-body">
               <div class="btn-row">
-                <button class="reset-btn" onclick="resetTypography(); event.stopPropagation();">
+                <button class="reset-btn" onclick="resetToFontPreset(); event.stopPropagation();">
                   <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   Reset
                 </button>
-                <button class="reset-btn save-btn" onclick="saveAsFontDefault(); event.stopPropagation();">
+                <button class="reset-btn save-btn" onclick="saveAsFontPreset(); event.stopPropagation();">
                   <svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save as default
                 </button>
@@ -152,28 +152,19 @@
                 <span class="prop-label">Font</span>
                 <select id="fontFamily" class="prop-value">
                   <option value="Helvetica">Helvetica</option>
-                </select>
-              </div>
-              <div class="prop-row-2col">
-                <select id="fontWeight">
-                  <option value="400">Regular</option>
-                  <option value="500">Medium</option>
-                  <option value="600">SemiBold</option>
-                  <option value="700">Bold</option>
-                  <option value="800">ExtraBold</option>
-                  <option value="900">Black</option>
-                </select>
-                <select id="fontStyle">
-                  <option value="normal">Normal</option>
-                  <option value="italic">Italic</option>
-                </select>
-              </div>
-              <div class="prop-row">
-                <span class="prop-label">Transform</span>
-                <select id="textTransform" class="prop-value">
-                  <option value="none">None</option>
-                  <option value="uppercase">Uppercase</option>
-                  <option value="capitalize">Title Case</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Oswald">Oswald</option>
+                  <option value="Bebas Neue">Bebas Neue</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Roboto">Roboto</option>
+                  <option value="Open Sans">Open Sans</option>
+                  <option value="Lato">Lato</option>
+                  <option value="Space Grotesk">Space Grotesk</option>
+                  <option value="DM Sans">DM Sans</option>
+                  <option value="Archivo Black">Archivo Black</option>
+                  <option value="Anton">Anton</option>
+                  <option value="Barlow Condensed">Barlow Condensed</option>
                 </select>
               </div>
               <div class="prop-row">
@@ -186,41 +177,24 @@
               <div class="prop-row">
                 <span class="prop-label">Optical Y Offset</span>
                 <div class="slider-row prop-value">
-                  <input type="range" id="spacingOpticalYOffset" min="0" max="0.15" step="0.005">
-                  <span class="slider-value" id="spacingOpticalYOffsetVal"></span>
+                  <input type="range" id="opticalYOffset" min="0" max="0.15" step="0.005">
+                  <span class="slider-value" id="opticalYOffsetVal"></span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Defaults -->
+          <!-- Config Code (Dev Tools) -->
           <div class="section collapsed">
             <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Defaults</span>
+              <span class="section-title">Config</span>
               <div class="section-toggle">
                 <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
               </div>
             </div>
             <div class="section-body">
-              <pre id="configDefaults" class="config-code"></pre>
-              <button class="reset-btn" onclick="copyConfigDefaults()">
-                <svg class="icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy
-              </button>
-            </div>
-          </div>
-
-          <!-- Font Preset -->
-          <div class="section collapsed">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Font Preset</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <pre id="configPreset" class="config-code"></pre>
-              <button class="reset-btn" onclick="copyConfigPreset()">
+              <pre id="configCode" class="config-code"></pre>
+              <button class="reset-btn" onclick="copyConfigCode()">
                 <svg class="icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 Copy
               </button>
@@ -237,143 +211,164 @@
         <div class="canvas-info" id="canvasInfo">1200 × 628 px</div>
       </main>
 
-      <!-- Right Panel -->
+      <!-- Right Panel: Content -->
       <aside class="panel right">
         <div class="panel-content">
-          <!-- Content -->
+          <!-- Intro -->
           <div class="section">
             <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Content</span>
+              <span class="section-title">Intro</span>
+              <span class="section-hint">Qualifier</span>
               <div class="section-toggle">
                 <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
               </div>
             </div>
             <div class="section-body">
-              <!-- Intro -->
-              <div class="text-block">
-                <div class="text-block-header" onclick="toggleTextBlock(this)">
-                  <span class="text-block-title">Intro</span>
-                  <span class="text-block-hint">Qualifier</span>
-                </div>
-                <div class="text-block-body">
-                  <input type="text" id="introText">
-                  <div class="mini-row">
-                    <select id="introWeight">
-                      <option value="400">Regular</option>
-                      <option value="500">Medium</option>
-                      <option value="600">SemiBold</option>
-                      <option value="700">Bold</option>
-                    </select>
-                    <select id="introTransform">
-                      <option value="none">As typed</option>
-                      <option value="uppercase">UPPER</option>
-                    </select>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Size</span>
-                    <input type="range" id="introSize" min="0.2" max="0.7" step="0.01">
-                    <span class="slider-value" id="introSizeVal"></span>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Margin Top</span>
-                    <input type="range" id="spacingIntroMarginTop" min="0" max="0.5" step="0.01">
-                    <span class="slider-value" id="spacingIntroMarginTopVal"></span>
-                  </div>
-                </div>
+              <input type="text" id="introText" class="text-input">
+              <div class="prop-row-2col">
+                <select id="introWeight">
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">SemiBold</option>
+                  <option value="700">Bold</option>
+                  <option value="800">ExtraBold</option>
+                </select>
+                <select id="introTransform">
+                  <option value="none">As typed</option>
+                  <option value="uppercase">UPPER</option>
+                  <option value="capitalize">Title</option>
+                </select>
               </div>
-
-              <!-- Headline -->
-              <div class="text-block">
-                <div class="text-block-header" onclick="toggleTextBlock(this)">
-                  <span class="text-block-title">Headline</span>
-                  <span class="text-block-hint">Primary</span>
-                </div>
-                <div class="text-block-body">
-                  <input type="text" id="headlineText1" placeholder="Line 1">
-                  <input type="text" id="headlineText2" placeholder="Line 2">
-                  <div class="slider-row">
-                    <span class="prop-label">Size</span>
-                    <input type="range" id="headlineSize" min="0.08" max="0.22" step="0.005">
-                    <span class="slider-value" id="headlineSizeVal"></span>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Margin Top</span>
-                    <input type="range" id="spacingHeadlineMarginTop" min="0" max="0.5" step="0.01">
-                    <span class="slider-value" id="spacingHeadlineMarginTopVal"></span>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Line Height</span>
-                    <input type="range" id="spacingHeadlineLineHeight" min="0.8" max="1.5" step="0.01">
-                    <span class="slider-value" id="spacingHeadlineLineHeightVal"></span>
-                  </div>
-                </div>
+              <div class="slider-row">
+                <span class="prop-label">Size</span>
+                <input type="range" id="introSize" min="0.02" max="0.12" step="0.002">
+                <span class="slider-value" id="introSizeVal"></span>
               </div>
-
-              <!-- Offer -->
-              <div class="text-block">
-                <div class="text-block-header" onclick="toggleTextBlock(this)">
-                  <span class="text-block-title">Offer</span>
-                  <span class="text-block-hint">CTA</span>
-                </div>
-                <div class="text-block-body">
-                  <input type="text" id="offerText">
-                  <div class="mini-row">
-                    <select id="offerWeight">
-                      <option value="400">Regular</option>
-                      <option value="600">SemiBold</option>
-                      <option value="700">Bold</option>
-                      <option value="800">ExtraBold</option>
-                      <option value="900">Black</option>
-                    </select>
-                    <select id="offerTransform">
-                      <option value="none">As typed</option>
-                      <option value="uppercase">UPPER</option>
-                    </select>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Size</span>
-                    <input type="range" id="offerSize" min="0.4" max="1.1" step="0.01">
-                    <span class="slider-value" id="offerSizeVal"></span>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Margin Top</span>
-                    <input type="range" id="spacingOfferMarginTop" min="0" max="1.5" step="0.01">
-                    <span class="slider-value" id="spacingOfferMarginTopVal"></span>
-                  </div>
-                </div>
+              <div class="slider-row">
+                <span class="prop-label">Margin</span>
+                <input type="range" id="introMarginTop" min="0" max="0.1" step="0.005">
+                <span class="slider-value" id="introMarginTopVal"></span>
               </div>
+            </div>
+          </div>
 
-              <!-- Legend -->
-              <div class="text-block">
-                <div class="text-block-header" onclick="toggleTextBlock(this)">
-                  <span class="text-block-title">Legend</span>
-                  <span class="text-block-hint">Fine print</span>
-                </div>
-                <div class="text-block-body">
-                  <input type="text" id="legendText">
-                  <div class="mini-row">
-                    <select id="legendWeight">
-                      <option value="400">Regular</option>
-                      <option value="500">Medium</option>
-                      <option value="600">SemiBold</option>
-                      <option value="700">Bold</option>
-                    </select>
-                    <select id="legendTransform">
-                      <option value="none">As typed</option>
-                      <option value="uppercase">UPPER</option>
-                    </select>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Size</span>
-                    <input type="range" id="legendSize" min="0.12" max="0.5" step="0.01">
-                    <span class="slider-value" id="legendSizeVal"></span>
-                  </div>
-                  <div class="slider-row">
-                    <span class="prop-label">Margin Top</span>
-                    <input type="range" id="spacingLegendMarginTop" min="0" max="1" step="0.01">
-                    <span class="slider-value" id="spacingLegendMarginTopVal"></span>
-                  </div>
-                </div>
+          <!-- Headline -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Headline</span>
+              <span class="section-hint">Primary</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <input type="text" id="headlineText1" class="text-input" placeholder="Line 1">
+              <input type="text" id="headlineText2" class="text-input" placeholder="Line 2">
+              <div class="prop-row-2col">
+                <select id="headlineWeight">
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">SemiBold</option>
+                  <option value="700">Bold</option>
+                  <option value="800">ExtraBold</option>
+                  <option value="900">Black</option>
+                </select>
+                <select id="headlineTransform">
+                  <option value="none">As typed</option>
+                  <option value="uppercase">UPPER</option>
+                  <option value="capitalize">Title</option>
+                </select>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Size</span>
+                <input type="range" id="headlineSize" min="0.08" max="0.25" step="0.005">
+                <span class="slider-value" id="headlineSizeVal"></span>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Margin</span>
+                <input type="range" id="headlineMarginTop" min="0" max="0.1" step="0.005">
+                <span class="slider-value" id="headlineMarginTopVal"></span>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Line Height</span>
+                <input type="range" id="headlineLineHeight" min="0.8" max="1.5" step="0.01">
+                <span class="slider-value" id="headlineLineHeightVal"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Offer -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Offer</span>
+              <span class="section-hint">CTA</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <input type="text" id="offerText" class="text-input">
+              <div class="prop-row-2col">
+                <select id="offerWeight">
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">SemiBold</option>
+                  <option value="700">Bold</option>
+                  <option value="800">ExtraBold</option>
+                  <option value="900">Black</option>
+                </select>
+                <select id="offerTransform">
+                  <option value="none">As typed</option>
+                  <option value="uppercase">UPPER</option>
+                  <option value="capitalize">Title</option>
+                </select>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Size</span>
+                <input type="range" id="offerSize" min="0.04" max="0.18" step="0.005">
+                <span class="slider-value" id="offerSizeVal"></span>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Margin</span>
+                <input type="range" id="offerMarginTop" min="0" max="0.25" step="0.005">
+                <span class="slider-value" id="offerMarginTopVal"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Legend</span>
+              <span class="section-hint">Fine print</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <input type="text" id="legendText" class="text-input">
+              <div class="prop-row-2col">
+                <select id="legendWeight">
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">SemiBold</option>
+                  <option value="700">Bold</option>
+                </select>
+                <select id="legendTransform">
+                  <option value="none">As typed</option>
+                  <option value="uppercase">UPPER</option>
+                  <option value="capitalize">Title</option>
+                </select>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Size</span>
+                <input type="range" id="legendSize" min="0.02" max="0.08" step="0.002">
+                <span class="slider-value" id="legendSizeVal"></span>
+              </div>
+              <div class="slider-row">
+                <span class="prop-label">Margin</span>
+                <input type="range" id="legendMarginTop" min="0" max="0.15" step="0.005">
+                <span class="slider-value" id="legendMarginTopVal"></span>
               </div>
             </div>
           </div>

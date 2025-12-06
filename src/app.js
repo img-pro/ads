@@ -5,8 +5,97 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// Reference CONFIG from config.js (loaded before app.js)
-const fontPresets = CONFIG.fontPresets;
+// ==========================================
+// FONT PRESETS
+// ==========================================
+
+// In-memory presets (starts from CONFIG, can be modified at runtime)
+const fontPresets = { ...CONFIG.fontPresets };
+
+// Load any saved custom presets from localStorage
+(function loadSavedPresets() {
+  const saved = JSON.parse(localStorage.getItem('fontPresets') || '{}');
+  Object.assign(fontPresets, saved);
+})();
+
+// Get preset for current font (returns undefined if none exists)
+function getFontPreset(fontFamily) {
+  return fontPresets[fontFamily];
+}
+
+// Apply preset to UI (only styling, not text content or margins)
+function applyFontPreset(fontFamily) {
+  const preset = getFontPreset(fontFamily);
+  if (!preset) return;
+
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    if (!preset[el]) return;
+    const p = preset[el];
+    if (p.size !== undefined) {
+      const sizeEl = document.getElementById(`${el}Size`);
+      if (sizeEl) sizeEl.value = p.size;
+    }
+    if (p.weight !== undefined) {
+      const weightEl = document.getElementById(`${el}Weight`);
+      if (weightEl) weightEl.value = p.weight;
+    }
+    if (p.transform !== undefined) {
+      const transformEl = document.getElementById(`${el}Transform`);
+      if (transformEl) transformEl.value = p.transform;
+    }
+    if (el === 'headline' && p.lineHeight !== undefined) {
+      const lhEl = document.getElementById('headlineLineHeight');
+      if (lhEl) lhEl.value = p.lineHeight;
+    }
+  });
+}
+
+// Save current styling as preset for the current font
+function saveAsFontPreset() {
+  const fontFamily = document.getElementById('fontFamily')?.value;
+  if (!fontFamily) return;
+
+  const preset = {};
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    preset[el] = {
+      size: parseFloat(document.getElementById(`${el}Size`)?.value) || 0,
+      weight: document.getElementById(`${el}Weight`)?.value || '400',
+      transform: document.getElementById(`${el}Transform`)?.value || 'none'
+    };
+    if (el === 'headline') {
+      preset[el].lineHeight = parseFloat(document.getElementById('headlineLineHeight')?.value) || 1;
+    }
+  });
+
+  fontPresets[fontFamily] = preset;
+
+  // Persist to localStorage
+  const saved = JSON.parse(localStorage.getItem('fontPresets') || '{}');
+  saved[fontFamily] = preset;
+  localStorage.setItem('fontPresets', JSON.stringify(saved));
+}
+
+// Reset to font preset (if exists) or CONFIG defaults
+function resetToFontPreset() {
+  const fontFamily = document.getElementById('fontFamily')?.value;
+  const preset = getFontPreset(fontFamily);
+
+  if (preset) {
+    applyFontPreset(fontFamily);
+  } else {
+    // Fall back to CONFIG.elements defaults
+    const e = CONFIG.elements;
+    ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+      document.getElementById(`${el}Size`).value = e[el].size;
+      document.getElementById(`${el}Weight`).value = e[el].weight;
+      document.getElementById(`${el}Transform`).value = e[el].transform;
+      if (el === 'headline') {
+        document.getElementById('headlineLineHeight').value = e[el].lineHeight;
+      }
+    });
+  }
+  generateAd();
+}
 
 // ==========================================
 // TAB NAVIGATION
@@ -16,15 +105,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const tabId = btn.dataset.tab;
 
-    // Update tab buttons
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
-    // Update tab content
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.getElementById(`${tabId}-tab`).classList.add('active');
 
-    // Update toolbar items
     document.querySelector('.toolbar-builder-items').style.display = tabId === 'builder' ? 'flex' : 'none';
     document.querySelector('.toolbar-data-items').style.display = tabId === 'data' ? 'flex' : 'none';
   });
@@ -43,64 +129,57 @@ function toggleTextBlock(header) {
 }
 
 // ==========================================
-// LOAD SAVED PRESETS FROM LOCALSTORAGE
-// ==========================================
-
-// Load custom presets from localStorage
-(function loadSavedPresets() {
-  const savedPresets = JSON.parse(localStorage.getItem('customFontPresets') || '{}');
-  Object.keys(savedPresets).forEach(fontFamily => {
-    if (fontPresets[fontFamily]) {
-      fontPresets[fontFamily] = { ...fontPresets[fontFamily], ...savedPresets[fontFamily] };
-    }
-  });
-})();
-
-// ==========================================
-// CONFIG CODE BLOCKS
+// CONFIG CODE BLOCK
 // ==========================================
 
 function updateConfigCode() {
-  updateConfigDefaults();
-  updateConfigPreset();
-}
-
-function updateConfigDefaults() {
-  const q = s => `'${s}'`; // single quote strings
-  const n = v => v; // numbers as-is
+  const q = s => `'${s}'`;
+  const n = v => v;
 
   const width = parseInt(document.getElementById('width')?.value) || 1200;
   const height = parseInt(document.getElementById('height')?.value) || 628;
   const bgColor = document.getElementById('bgColor')?.value || '#0033FF';
   const textColor = document.getElementById('textColor')?.value || '#FFFFFF';
-  const intro = document.getElementById('introText')?.value || '';
-  const headline1 = document.getElementById('headlineText1')?.value || '';
-  const headline2 = document.getElementById('headlineText2')?.value || '';
-  const offer = document.getElementById('offerText')?.value || '';
-  const legend = document.getElementById('legendText')?.value || '';
   const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
-  const fontWeight = document.getElementById('fontWeight')?.value || '700';
-  const fontStyle = document.getElementById('fontStyle')?.value || 'normal';
-  const textTransform = document.getElementById('textTransform')?.value || 'none';
   const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
-  const introSize = parseFloat(document.getElementById('introSize')?.value) || 0;
-  const introWeight = document.getElementById('introWeight')?.value || '500';
-  const introTransform = document.getElementById('introTransform')?.value || 'none';
-  const headlineSize = parseFloat(document.getElementById('headlineSize')?.value) || 0;
-  const offerSize = parseFloat(document.getElementById('offerSize')?.value) || 0;
-  const offerWeight = document.getElementById('offerWeight')?.value || '800';
-  const offerTransform = document.getElementById('offerTransform')?.value || 'uppercase';
-  const legendSize = parseFloat(document.getElementById('legendSize')?.value) || 0;
-  const legendWeight = document.getElementById('legendWeight')?.value || '400';
-  const legendTransform = document.getElementById('legendTransform')?.value || 'none';
-  const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) || 0;
-  const introMarginTop = parseFloat(document.getElementById('spacingIntroMarginTop')?.value) || 0;
-  const headlineMarginTop = parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) || 0;
-  const headlineLineHeight = parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) || 1;
-  const offerMarginTop = parseFloat(document.getElementById('spacingOfferMarginTop')?.value) || 0;
-  const legendMarginTop = parseFloat(document.getElementById('spacingLegendMarginTop')?.value) || 0;
+  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055;
 
-  const output = `canvas: {
+  const intro = {
+    text: document.getElementById('introText')?.value || '',
+    size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
+    weight: document.getElementById('introWeight')?.value || '500',
+    transform: document.getElementById('introTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
+  };
+
+  const headline = {
+    text1: document.getElementById('headlineText1')?.value || '',
+    text2: document.getElementById('headlineText2')?.value || '',
+    size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
+    weight: document.getElementById('headlineWeight')?.value || '700',
+    transform: document.getElementById('headlineTransform')?.value || 'uppercase',
+    marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
+    lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+  };
+
+  const offer = {
+    text: document.getElementById('offerText')?.value || '',
+    size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
+    weight: document.getElementById('offerWeight')?.value || '800',
+    transform: document.getElementById('offerTransform')?.value || 'uppercase',
+    marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+  };
+
+  const legend = {
+    text: document.getElementById('legendText')?.value || '',
+    size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
+    weight: document.getElementById('legendWeight')?.value || '400',
+    transform: document.getElementById('legendTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+  };
+
+  const output = `const CONFIG = {
+  canvas: {
     width: ${n(width)},
     height: ${n(height)}
   },
@@ -110,179 +189,63 @@ function updateConfigDefaults() {
     text: ${q(textColor)}
   },
 
-  content: {
-    intro: ${q(intro)},
-    headline1: ${q(headline1)},
-    headline2: ${q(headline2)},
-    offer: ${q(offer)},
-    legend: ${q(legend)}
-  },
-
   typography: {
     fontFamily: ${q(fontFamily)},
-    fontWeight: ${q(fontWeight)},
-    fontStyle: ${q(fontStyle)},
-    textTransform: ${q(textTransform)},
     letterSpacing: ${n(letterSpacing)},
-    introSize: ${n(introSize)},
-    introWeight: ${q(introWeight)},
-    introTransform: ${q(introTransform)},
-    headlineSize: ${n(headlineSize)},
-    offerSize: ${n(offerSize)},
-    offerWeight: ${q(offerWeight)},
-    offerTransform: ${q(offerTransform)},
-    legendSize: ${n(legendSize)},
-    legendWeight: ${q(legendWeight)},
-    legendTransform: ${q(legendTransform)}
+    opticalYOffset: ${n(opticalYOffset)}
   },
 
-  spacing: {
-    opticalYOffset: ${n(opticalYOffset)},
-    intro: { marginTop: ${n(introMarginTop)} },
-    headline: { marginTop: ${n(headlineMarginTop)}, lineHeight: ${n(headlineLineHeight)} },
-    offer: { marginTop: ${n(offerMarginTop)} },
-    legend: { marginTop: ${n(legendMarginTop)} }
-  },`;
+  elements: {
+    intro: {
+      text: ${q(intro.text)},
+      size: ${n(intro.size)},
+      weight: ${q(intro.weight)},
+      transform: ${q(intro.transform)},
+      marginTop: ${n(intro.marginTop)}
+    },
+    headline: {
+      text: [${q(headline.text1)}, ${q(headline.text2)}],
+      size: ${n(headline.size)},
+      weight: ${q(headline.weight)},
+      transform: ${q(headline.transform)},
+      marginTop: ${n(headline.marginTop)},
+      lineHeight: ${n(headline.lineHeight)}
+    },
+    offer: {
+      text: ${q(offer.text)},
+      size: ${n(offer.size)},
+      weight: ${q(offer.weight)},
+      transform: ${q(offer.transform)},
+      marginTop: ${n(offer.marginTop)}
+    },
+    legend: {
+      text: ${q(legend.text)},
+      size: ${n(legend.size)},
+      weight: ${q(legend.weight)},
+      transform: ${q(legend.transform)},
+      marginTop: ${n(legend.marginTop)}
+    }
+  }
+};`;
 
-  const codeEl = document.getElementById('configDefaults');
+  const codeEl = document.getElementById('configCode');
   if (codeEl) {
     codeEl.textContent = output;
   }
 }
 
-function updateConfigPreset() {
-  const q = s => `'${s}'`; // single quote strings
-  const n = v => v; // numbers as-is
-
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
-  const fontWeight = document.getElementById('fontWeight')?.value || '700';
-  const fontStyle = document.getElementById('fontStyle')?.value || 'normal';
-  const textTransform = document.getElementById('textTransform')?.value || 'none';
-  const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
-  const introSize = parseFloat(document.getElementById('introSize')?.value) || 0;
-  const introWeight = document.getElementById('introWeight')?.value || '500';
-  const introTransform = document.getElementById('introTransform')?.value || 'none';
-  const headlineSize = parseFloat(document.getElementById('headlineSize')?.value) || 0;
-  const offerSize = parseFloat(document.getElementById('offerSize')?.value) || 0;
-  const offerWeight = document.getElementById('offerWeight')?.value || '800';
-  const offerTransform = document.getElementById('offerTransform')?.value || 'uppercase';
-  const legendSize = parseFloat(document.getElementById('legendSize')?.value) || 0;
-  const legendWeight = document.getElementById('legendWeight')?.value || '400';
-  const legendTransform = document.getElementById('legendTransform')?.value || 'none';
-
-  const output = `'${fontFamily}': {
-  fontWeight: ${q(fontWeight)},
-  fontStyle: ${q(fontStyle)},
-  textTransform: ${q(textTransform)},
-  letterSpacing: ${n(letterSpacing)},
-  introSize: ${n(introSize)},
-  introWeight: ${q(introWeight)},
-  introTransform: ${q(introTransform)},
-  headlineSize: ${n(headlineSize)},
-  offerSize: ${n(offerSize)},
-  offerWeight: ${q(offerWeight)},
-  offerTransform: ${q(offerTransform)},
-  legendSize: ${n(legendSize)},
-  legendWeight: ${q(legendWeight)},
-  legendTransform: ${q(legendTransform)}
-}`;
-
-  const codeEl = document.getElementById('configPreset');
-  if (codeEl) {
-    codeEl.textContent = output;
-  }
-}
-
-function copyConfigDefaults() {
-  const codeEl = document.getElementById('configDefaults');
+function copyConfigCode() {
+  const codeEl = document.getElementById('configCode');
   if (codeEl && codeEl.textContent) {
     navigator.clipboard.writeText(codeEl.textContent).then(() => {
-      showCopyFeedback(codeEl);
+      const btn = codeEl.nextElementSibling;
+      if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Copied';
+        setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+      }
     });
   }
-}
-
-function copyConfigPreset() {
-  const codeEl = document.getElementById('configPreset');
-  if (codeEl && codeEl.textContent) {
-    navigator.clipboard.writeText(codeEl.textContent).then(() => {
-      showCopyFeedback(codeEl);
-    });
-  }
-}
-
-function showCopyFeedback(codeEl) {
-  const btn = codeEl.nextElementSibling;
-  if (btn) {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Copied';
-    setTimeout(() => { btn.innerHTML = originalText; }, 1500);
-  }
-}
-
-// ==========================================
-// TYPOGRAPHY OVERRIDES
-// ==========================================
-
-const overrides = new Set();
-const typographyFields = [
-  'fontWeight', 'fontStyle', 'textTransform', 'letterSpacing',
-  'introSize', 'introWeight', 'introTransform',
-  'headlineSize', 'offerSize', 'offerWeight', 'offerTransform',
-  'legendSize', 'legendWeight', 'legendTransform'
-];
-
-function getCurrentPreset() {
-  const fontFamily = document.getElementById('fontFamily').value;
-  return fontPresets[fontFamily] || fontPresets['Inter'];
-}
-
-function applyFontPreset(clearOverrides = false) {
-  if (clearOverrides) overrides.clear();
-  const preset = getCurrentPreset();
-  typographyFields.forEach(field => {
-    if (!overrides.has(field) && preset[field] !== undefined) {
-      const el = document.getElementById(field);
-      if (el) el.value = preset[field];
-    }
-  });
-}
-
-function markOverride(fieldId) {
-  if (typographyFields.includes(fieldId)) {
-    overrides.add(fieldId);
-  }
-}
-
-function resetTypography() {
-  overrides.clear();
-  applyFontPreset();
-  generateAd();
-}
-
-function saveAsFontDefault() {
-  const fontFamily = document.getElementById('fontFamily').value;
-  const newPreset = {};
-
-  typographyFields.forEach(field => {
-    const el = document.getElementById(field);
-    if (el) {
-      const value = el.value;
-      // Convert numeric strings to numbers
-      newPreset[field] = isNaN(value) ? value : parseFloat(value);
-    }
-  });
-
-  // Update the in-memory preset
-  fontPresets[fontFamily] = { ...fontPresets[fontFamily], ...newPreset };
-
-  // Save to localStorage for persistence
-  const savedPresets = JSON.parse(localStorage.getItem('customFontPresets') || '{}');
-  savedPresets[fontFamily] = newPreset;
-  localStorage.setItem('customFontPresets', JSON.stringify(savedPresets));
-
-  // Clear overrides since these are now the defaults
-  overrides.clear();
 }
 
 // ==========================================
@@ -341,36 +304,37 @@ syncColors('textColorPicker', 'textColor');
 function updateDisplays() {
   const w = document.getElementById('width')?.value || 1200;
   const h = document.getElementById('height')?.value || 628;
+  const canvasHeight = parseInt(h);
 
-  const introSizeVal = document.getElementById('introSizeVal');
-  const headlineSizeVal = document.getElementById('headlineSizeVal');
-  const offerSizeVal = document.getElementById('offerSizeVal');
-  const legendSizeVal = document.getElementById('legendSizeVal');
-  const letterSpacingVal = document.getElementById('letterSpacingVal');
+  // Canvas dimensions
   const canvasDims = document.getElementById('canvasDims');
   const canvasInfo = document.getElementById('canvasInfo');
-
-  if (introSizeVal) introSizeVal.textContent = parseFloat(document.getElementById('introSize')?.value || 0).toFixed(2) + '×';
-  if (headlineSizeVal) headlineSizeVal.textContent = Math.round(parseFloat(document.getElementById('headlineSize')?.value || 0) * 100) + '%';
-  if (offerSizeVal) offerSizeVal.textContent = parseFloat(document.getElementById('offerSize')?.value || 0).toFixed(2) + '×';
-  if (legendSizeVal) legendSizeVal.textContent = parseFloat(document.getElementById('legendSize')?.value || 0).toFixed(2) + '×';
-  if (letterSpacingVal) letterSpacingVal.textContent = Math.round(parseFloat(document.getElementById('letterSpacing')?.value || 0) * 100) + '%';
   if (canvasDims) canvasDims.textContent = `${w} × ${h}`;
   if (canvasInfo) canvasInfo.textContent = `${w} × ${h} px`;
 
-  // Spacing displays
-  const spacingOpticalYOffsetVal = document.getElementById('spacingOpticalYOffsetVal');
-  if (spacingOpticalYOffsetVal) spacingOpticalYOffsetVal.textContent = parseFloat(document.getElementById('spacingOpticalYOffset')?.value || 0).toFixed(3);
+  // Typography
+  const letterSpacingVal = document.getElementById('letterSpacingVal');
+  const opticalYOffsetVal = document.getElementById('opticalYOffsetVal');
+  if (letterSpacingVal) letterSpacingVal.textContent = Math.round(parseFloat(document.getElementById('letterSpacing')?.value || 0) * 100) + '%';
+  if (opticalYOffsetVal) opticalYOffsetVal.textContent = parseFloat(document.getElementById('opticalYOffset')?.value || 0).toFixed(3);
 
-  // Per-element spacing displays
-  ['Intro', 'Headline', 'Offer', 'Legend'].forEach(el => {
-    const marginTopVal = document.getElementById(`spacing${el}MarginTopVal`);
-    if (marginTopVal) marginTopVal.textContent = parseFloat(document.getElementById(`spacing${el}MarginTop`)?.value || 0).toFixed(2) + '×';
+  // Element size displays (show as pixels)
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    const sizeVal = document.getElementById(`${el}SizeVal`);
+    const size = parseFloat(document.getElementById(`${el}Size`)?.value || 0);
+    if (sizeVal) sizeVal.textContent = Math.round(size * canvasHeight) + 'px';
   });
 
-  // Headline lineHeight (only multi-line element)
-  const headlineLineHeightVal = document.getElementById('spacingHeadlineLineHeightVal');
-  if (headlineLineHeightVal) headlineLineHeightVal.textContent = parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value || 1).toFixed(2);
+  // Element margin displays
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    const marginVal = document.getElementById(`${el}MarginTopVal`);
+    const margin = parseFloat(document.getElementById(`${el}MarginTop`)?.value || 0);
+    if (marginVal) marginVal.textContent = Math.round(margin * canvasHeight) + 'px';
+  });
+
+  // Headline line height
+  const lineHeightVal = document.getElementById('headlineLineHeightVal');
+  if (lineHeightVal) lineHeightVal.textContent = parseFloat(document.getElementById('headlineLineHeight')?.value || 1).toFixed(2);
 }
 
 // ==========================================
@@ -386,15 +350,15 @@ function applyTransform(text, transform) {
   }
 }
 
-function fitText(targetCtx, text, maxWidth, fontSize, fontWeight, fontStyle, fontFamily, letterSpacing) {
+function fitText(targetCtx, text, maxWidth, fontSize, fontWeight, fontFamily, letterSpacing) {
   if (!text) return fontSize;
   let size = fontSize;
   const spacing = size * letterSpacing;
-  targetCtx.font = `${fontStyle} ${fontWeight} ${size}px "${fontFamily}"`;
+  targetCtx.font = `${fontWeight} ${size}px "${fontFamily}"`;
 
   while ((targetCtx.measureText(text).width + (text.length - 1) * spacing) > maxWidth && size > 8) {
     size -= 1;
-    targetCtx.font = `${fontStyle} ${fontWeight} ${size}px "${fontFamily}"`;
+    targetCtx.font = `${fontWeight} ${size}px "${fontFamily}"`;
   }
   return size;
 }
@@ -428,110 +392,99 @@ function generateAd() {
   exportCtx.imageSmoothingEnabled = true;
   exportCtx.imageSmoothingQuality = 'high';
 
+  // Get values from UI
   const bgColor = document.getElementById('bgColor')?.value || '#0033FF';
   const textColor = document.getElementById('textColor')?.value || '#FFFFFF';
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Inter';
-  const globalWeight = document.getElementById('fontWeight')?.value || '700';
-  const globalStyle = document.getElementById('fontStyle')?.value || 'normal';
-  const globalTransform = document.getElementById('textTransform')?.value || 'none';
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
   const letterSpacing = parseFloat(document.getElementById('letterSpacing')?.value) || 0;
+  const opticalYOffset = parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055;
 
-  const headlineFactor = parseFloat(document.getElementById('headlineSize')?.value) || 0.15;
-  const introFactor = parseFloat(document.getElementById('introSize')?.value) || 0.38;
-  const offerFactor = parseFloat(document.getElementById('offerSize')?.value) || 0.65;
-  const legendFactor = parseFloat(document.getElementById('legendSize')?.value) || 0.22;
-
-  const introWeight = document.getElementById('introWeight')?.value || '500';
-  const introTransform = document.getElementById('introTransform')?.value || 'none';
-  const offerWeight = document.getElementById('offerWeight')?.value || '800';
-  const offerTransform = document.getElementById('offerTransform')?.value || 'uppercase';
-  const legendWeight = document.getElementById('legendWeight')?.value || '400';
-  const legendTransform = document.getElementById('legendTransform')?.value || 'none';
-
-  let introText = document.getElementById('introText')?.value || '';
-  let headlineText1 = document.getElementById('headlineText1')?.value || '';
-  let headlineText2 = document.getElementById('headlineText2')?.value || '';
-  let offerText = document.getElementById('offerText')?.value || '';
-  let legendText = document.getElementById('legendText')?.value || '';
-
-  introText = applyTransform(introText, introTransform !== 'none' ? introTransform : globalTransform);
-  headlineText1 = applyTransform(headlineText1, globalTransform);
-  headlineText2 = applyTransform(headlineText2, globalTransform);
-  offerText = applyTransform(offerText, offerTransform !== 'none' ? offerTransform : globalTransform);
-  legendText = applyTransform(legendText, legendTransform !== 'none' ? legendTransform : globalTransform);
-
-  const baseHeadlineSize = height * headlineFactor;
-  const introSize = baseHeadlineSize * introFactor;
-  const offerSize = baseHeadlineSize * offerFactor;
-  const legendSize = baseHeadlineSize * legendFactor;
-
-  const maxTextWidth = width * 0.88;
-
-  // Use exportCtx for text measurement (1:1 scale)
-  const introFontSize = fitText(exportCtx, introText, maxTextWidth, introSize,
-    introWeight !== 'normal' ? introWeight : globalWeight, globalStyle, fontFamily, letterSpacing);
-  const headline1FontSize = fitText(exportCtx, headlineText1, maxTextWidth, baseHeadlineSize,
-    globalWeight, globalStyle, fontFamily, letterSpacing);
-  const headline2FontSize = fitText(exportCtx, headlineText2, maxTextWidth, baseHeadlineSize,
-    globalWeight, globalStyle, fontFamily, letterSpacing);
-  const offerFontSize = fitText(exportCtx, offerText, maxTextWidth, offerSize,
-    offerWeight, globalStyle, fontFamily, letterSpacing);
-  const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, legendSize,
-    legendWeight !== 'normal' ? legendWeight : globalWeight, globalStyle, fontFamily, letterSpacing);
-
-  // Per-element spacing
-  const spacing = {
-    intro: {
-      marginTop: parseFloat(document.getElementById('spacingIntroMarginTop')?.value) ?? CONFIG.spacing.intro.marginTop
-    },
-    headline: {
-      marginTop: parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) ?? CONFIG.spacing.headline.marginTop,
-      lineHeight: parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) ?? CONFIG.spacing.headline.lineHeight
-    },
-    offer: {
-      marginTop: parseFloat(document.getElementById('spacingOfferMarginTop')?.value) ?? CONFIG.spacing.offer.marginTop
-    },
-    legend: {
-      marginTop: parseFloat(document.getElementById('spacingLegendMarginTop')?.value) ?? CONFIG.spacing.legend.marginTop
-    }
+  // Get element configs
+  const intro = {
+    text: document.getElementById('introText')?.value || '',
+    size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
+    weight: document.getElementById('introWeight')?.value || '500',
+    transform: document.getElementById('introTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
   };
 
+  const headline = {
+    text1: document.getElementById('headlineText1')?.value || '',
+    text2: document.getElementById('headlineText2')?.value || '',
+    size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
+    weight: document.getElementById('headlineWeight')?.value || '700',
+    transform: document.getElementById('headlineTransform')?.value || 'uppercase',
+    marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
+    lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+  };
+
+  const offer = {
+    text: document.getElementById('offerText')?.value || '',
+    size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
+    weight: document.getElementById('offerWeight')?.value || '800',
+    transform: document.getElementById('offerTransform')?.value || 'uppercase',
+    marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+  };
+
+  const legend = {
+    text: document.getElementById('legendText')?.value || '',
+    size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
+    weight: document.getElementById('legendWeight')?.value || '400',
+    transform: document.getElementById('legendTransform')?.value || 'none',
+    marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+  };
+
+  // Apply text transforms
+  const introText = applyTransform(intro.text, intro.transform);
+  const headlineText1 = applyTransform(headline.text1, headline.transform);
+  const headlineText2 = applyTransform(headline.text2, headline.transform);
+  const offerText = applyTransform(offer.text, offer.transform);
+  const legendText = applyTransform(legend.text, legend.transform);
+
+  // Calculate font sizes (all as % of canvas height)
+  const maxTextWidth = width * 0.88;
+  const introFontSize = fitText(exportCtx, introText, maxTextWidth, height * intro.size, intro.weight, fontFamily, letterSpacing);
+  const headline1FontSize = fitText(exportCtx, headlineText1, maxTextWidth, height * headline.size, headline.weight, fontFamily, letterSpacing);
+  const headline2FontSize = fitText(exportCtx, headlineText2, maxTextWidth, height * headline.size, headline.weight, fontFamily, letterSpacing);
+  const offerFontSize = fitText(exportCtx, offerText, maxTextWidth, height * offer.size, offer.weight, fontFamily, letterSpacing);
+  const legendFontSize = fitText(exportCtx, legendText, maxTextWidth, height * legend.size, legend.weight, fontFamily, letterSpacing);
+
+  // Build elements array
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    const marginTop = baseHeadlineSize * spacing.intro.marginTop;
+    const marginTop = height * intro.marginTop;
     contentHeight += marginTop;
-    elements.push({ type: 'intro', text: introText, fontSize: introFontSize, weight: introWeight !== 'normal' ? introWeight : globalWeight, marginTop });
+    elements.push({ text: introText, fontSize: introFontSize, weight: intro.weight, marginTop });
     contentHeight += introFontSize;
   }
 
   if (headlineText1) {
-    const marginTop = baseHeadlineSize * spacing.headline.marginTop;
+    const marginTop = height * headline.marginTop;
     contentHeight += marginTop;
-    elements.push({ type: 'headline1', text: headlineText1, fontSize: headline1FontSize, weight: globalWeight, marginTop });
+    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: headline.weight, marginTop });
     contentHeight += headline1FontSize;
   }
 
   if (headlineText2) {
-    // Second headline line uses lineHeight instead of marginTop
-    const lineGap = headline1FontSize * (spacing.headline.lineHeight - 1);
+    const lineGap = headline1FontSize * (headline.lineHeight - 1);
     contentHeight += lineGap;
-    elements.push({ type: 'headline2', text: headlineText2, fontSize: headline2FontSize, weight: globalWeight, marginTop: lineGap });
+    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: headline.weight, marginTop: lineGap });
     contentHeight += headline2FontSize;
   }
 
   if (offerText) {
-    const marginTop = baseHeadlineSize * spacing.offer.marginTop;
+    const marginTop = height * offer.marginTop;
     contentHeight += marginTop;
-    elements.push({ type: 'offer', text: offerText, fontSize: offerFontSize, weight: offerWeight, marginTop });
+    elements.push({ text: offerText, fontSize: offerFontSize, weight: offer.weight, marginTop });
     contentHeight += offerFontSize;
   }
 
   if (legendText) {
-    const marginTop = baseHeadlineSize * spacing.legend.marginTop;
+    const marginTop = height * legend.marginTop;
     contentHeight += marginTop;
-    elements.push({ type: 'legend', text: legendText, fontSize: legendFontSize, weight: legendWeight !== 'normal' ? legendWeight : globalWeight, marginTop });
+    elements.push({ text: legendText, fontSize: legendFontSize, weight: legend.weight, marginTop });
     contentHeight += legendFontSize;
   }
 
@@ -542,7 +495,6 @@ function generateAd() {
     targetCtx.fillStyle = bgColor;
     targetCtx.fillRect(0, 0, width, height);
 
-    const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) || CONFIG.spacing.opticalYOffset;
     const opticalOffset = height * opticalYOffset;
     let currentY = (height - contentHeight) / 2 - opticalOffset;
 
@@ -551,10 +503,9 @@ function generateAd() {
     targetCtx.textBaseline = 'top';
 
     elements.forEach((el) => {
-      // Apply marginTop before drawing
       currentY += el.marginTop;
 
-      targetCtx.font = `${globalStyle} ${el.weight} ${el.fontSize}px "${fontFamily}"`;
+      targetCtx.font = `${el.weight} ${el.fontSize}px "${fontFamily}"`;
 
       if (letterSpacing !== 0) {
         const charSpacing = el.fontSize * letterSpacing;
@@ -650,22 +601,9 @@ function downloadAd() {
 }
 
 function resetDefaults() {
-  Object.keys(globalDefaults).forEach(key => {
-    const el = document.getElementById(key);
-    if (el) {
-      el.value = globalDefaults[key];
-      if (key === 'bgColor') document.getElementById('bgColorPicker').value = globalDefaults[key];
-      if (key === 'textColor') document.getElementById('textColorPicker').value = globalDefaults[key];
-    }
-  });
-
-  document.getElementById('fontFamily').value = 'Inter';
-  overrides.clear();
-  applyFontPreset();
-
+  loadDefaults();
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.size-btn[data-w="1200"][data-h="628"]')?.classList.add('active');
-
   generateAd();
 }
 
@@ -689,7 +627,7 @@ async function ensureFontLoaded(fontFamily) {
 
 const originalGenerateAd = generateAd;
 generateAd = async function() {
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Inter';
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
   await ensureFontLoaded(fontFamily);
   originalGenerateAd();
 };
@@ -700,9 +638,10 @@ generateAd = async function() {
 
 document.querySelectorAll('#builder-tab input, #builder-tab select').forEach(input => {
   input.addEventListener('input', (e) => {
-    const id = e.target.id;
-    if (id === 'fontFamily') applyFontPreset();
-    else if (typographyFields.includes(id)) markOverride(id);
+    // When font changes, apply preset if one exists
+    if (e.target.id === 'fontFamily') {
+      applyFontPreset(e.target.value);
+    }
     generateAd();
   });
 });
@@ -893,7 +832,7 @@ The ad has a strict visual hierarchy:
 - Use short, punchy words — devs hate fluff
 - Avoid marketing tone; write like a performance engineer
 - Intros can be questions; headlines must be statements
-- Offer answers: “What’s the upside?” or “What’s the catch?”
+- Offer answers: "What's the upside?" or "What's the catch?"
 - Legend adds credibility without selling
 
 ## Brief from user:
@@ -921,7 +860,6 @@ Return ONLY a JSON array, no other text:
     const data = await response.json();
     const content = data.content[0].text;
 
-    // Parse JSON from response
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const variations = JSON.parse(jsonMatch[0]);
@@ -973,24 +911,36 @@ async function exportAllAds() {
   const template = {
     bgColor: document.getElementById('bgColor')?.value || '#0033FF',
     textColor: document.getElementById('textColor')?.value || '#FFFFFF',
-    fontFamily: document.getElementById('fontFamily')?.value || 'Inter',
-    fontWeight: document.getElementById('fontWeight')?.value || '700',
-    fontStyle: document.getElementById('fontStyle')?.value || 'normal',
-    textTransform: document.getElementById('textTransform')?.value || 'none',
+    fontFamily: document.getElementById('fontFamily')?.value || 'Helvetica',
     letterSpacing: parseFloat(document.getElementById('letterSpacing')?.value) || 0,
-    headlineSize: parseFloat(document.getElementById('headlineSize')?.value) || 0.15,
-    introSize: parseFloat(document.getElementById('introSize')?.value) || 0.38,
-    offerSize: parseFloat(document.getElementById('offerSize')?.value) || 0.65,
-    legendSize: parseFloat(document.getElementById('legendSize')?.value) || 0.22,
-    introWeight: document.getElementById('introWeight')?.value || '500',
-    introTransform: document.getElementById('introTransform')?.value || 'none',
-    offerWeight: document.getElementById('offerWeight')?.value || '800',
-    offerTransform: document.getElementById('offerTransform')?.value || 'uppercase',
-    legendWeight: document.getElementById('legendWeight')?.value || '400',
-    legendTransform: document.getElementById('legendTransform')?.value || 'none'
+    opticalYOffset: parseFloat(document.getElementById('opticalYOffset')?.value) || 0.055,
+    intro: {
+      size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
+      weight: document.getElementById('introWeight')?.value || '500',
+      transform: document.getElementById('introTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
+    },
+    headline: {
+      size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
+      weight: document.getElementById('headlineWeight')?.value || '700',
+      transform: document.getElementById('headlineTransform')?.value || 'uppercase',
+      marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
+      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+    },
+    offer: {
+      size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
+      weight: document.getElementById('offerWeight')?.value || '800',
+      transform: document.getElementById('offerTransform')?.value || 'uppercase',
+      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+    },
+    legend: {
+      size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
+      weight: document.getElementById('legendWeight')?.value || '400',
+      transform: document.getElementById('legendTransform')?.value || 'none',
+      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+    }
   };
 
-  // Ensure font is loaded
   await ensureFontLoaded(template.fontFamily);
 
   try {
@@ -1028,74 +978,54 @@ async function renderAdToDataUrl(row, template, width, height) {
   tempCtx.imageSmoothingEnabled = true;
   tempCtx.imageSmoothingQuality = 'high';
 
-  let introText = applyTransform(row.intro, template.introTransform !== 'none' ? template.introTransform : template.textTransform);
-  let headlineText1 = applyTransform(row.headline1, template.textTransform);
-  let headlineText2 = applyTransform(row.headline2, template.textTransform);
-  let offerText = applyTransform(row.offer, template.offerTransform !== 'none' ? template.offerTransform : template.textTransform);
-  let legendText = applyTransform(row.legend, template.legendTransform !== 'none' ? template.legendTransform : template.textTransform);
+  // Apply transforms
+  const introText = applyTransform(row.intro, template.intro.transform);
+  const headlineText1 = applyTransform(row.headline1, template.headline.transform);
+  const headlineText2 = applyTransform(row.headline2, template.headline.transform);
+  const offerText = applyTransform(row.offer, template.offer.transform);
+  const legendText = applyTransform(row.legend, template.legend.transform);
 
-  const baseHeadlineSize = height * template.headlineSize;
   const maxTextWidth = width * 0.88;
 
-  const introFontSize = fitText(tempCtx, introText, maxTextWidth, baseHeadlineSize * template.introSize,
-    template.introWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
-  const headline1FontSize = fitText(tempCtx, headlineText1, maxTextWidth, baseHeadlineSize,
-    template.fontWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
-  const headline2FontSize = fitText(tempCtx, headlineText2, maxTextWidth, baseHeadlineSize,
-    template.fontWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
-  const offerFontSize = fitText(tempCtx, offerText, maxTextWidth, baseHeadlineSize * template.offerSize,
-    template.offerWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
-  const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, baseHeadlineSize * template.legendSize,
-    template.legendWeight, template.fontStyle, template.fontFamily, template.letterSpacing);
+  // Calculate font sizes
+  const introFontSize = fitText(tempCtx, introText, maxTextWidth, height * template.intro.size, template.intro.weight, template.fontFamily, template.letterSpacing);
+  const headline1FontSize = fitText(tempCtx, headlineText1, maxTextWidth, height * template.headline.size, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const headline2FontSize = fitText(tempCtx, headlineText2, maxTextWidth, height * template.headline.size, template.headline.weight, template.fontFamily, template.letterSpacing);
+  const offerFontSize = fitText(tempCtx, offerText, maxTextWidth, height * template.offer.size, template.offer.weight, template.fontFamily, template.letterSpacing);
+  const legendFontSize = fitText(tempCtx, legendText, maxTextWidth, height * template.legend.size, template.legend.weight, template.fontFamily, template.letterSpacing);
 
-  // Per-element spacing
-  const spacing = {
-    intro: {
-      marginTop: parseFloat(document.getElementById('spacingIntroMarginTop')?.value) ?? CONFIG.spacing.intro.marginTop
-    },
-    headline: {
-      marginTop: parseFloat(document.getElementById('spacingHeadlineMarginTop')?.value) ?? CONFIG.spacing.headline.marginTop,
-      lineHeight: parseFloat(document.getElementById('spacingHeadlineLineHeight')?.value) ?? CONFIG.spacing.headline.lineHeight
-    },
-    offer: {
-      marginTop: parseFloat(document.getElementById('spacingOfferMarginTop')?.value) ?? CONFIG.spacing.offer.marginTop
-    },
-    legend: {
-      marginTop: parseFloat(document.getElementById('spacingLegendMarginTop')?.value) ?? CONFIG.spacing.legend.marginTop
-    }
-  };
-
+  // Build elements
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
-    const marginTop = baseHeadlineSize * spacing.intro.marginTop;
+    const marginTop = height * template.intro.marginTop;
     contentHeight += marginTop;
-    elements.push({ text: introText, fontSize: introFontSize, weight: template.introWeight, type: 'intro', marginTop });
+    elements.push({ text: introText, fontSize: introFontSize, weight: template.intro.weight, marginTop });
     contentHeight += introFontSize;
   }
   if (headlineText1) {
-    const marginTop = baseHeadlineSize * spacing.headline.marginTop;
+    const marginTop = height * template.headline.marginTop;
     contentHeight += marginTop;
-    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.fontWeight, type: 'headline1', marginTop });
+    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: template.headline.weight, marginTop });
     contentHeight += headline1FontSize;
   }
   if (headlineText2) {
-    const lineGap = headline1FontSize * (spacing.headline.lineHeight - 1);
+    const lineGap = headline1FontSize * (template.headline.lineHeight - 1);
     contentHeight += lineGap;
-    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: template.fontWeight, type: 'headline2', marginTop: lineGap });
+    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: template.headline.weight, marginTop: lineGap });
     contentHeight += headline2FontSize;
   }
   if (offerText) {
-    const marginTop = baseHeadlineSize * spacing.offer.marginTop;
+    const marginTop = height * template.offer.marginTop;
     contentHeight += marginTop;
-    elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offerWeight, type: 'offer', marginTop });
+    elements.push({ text: offerText, fontSize: offerFontSize, weight: template.offer.weight, marginTop });
     contentHeight += offerFontSize;
   }
   if (legendText) {
-    const marginTop = baseHeadlineSize * spacing.legend.marginTop;
+    const marginTop = height * template.legend.marginTop;
     contentHeight += marginTop;
-    elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legendWeight, type: 'legend', marginTop });
+    elements.push({ text: legendText, fontSize: legendFontSize, weight: template.legend.weight, marginTop });
     contentHeight += legendFontSize;
   }
 
@@ -1103,8 +1033,7 @@ async function renderAdToDataUrl(row, template, width, height) {
   tempCtx.fillStyle = template.bgColor;
   tempCtx.fillRect(0, 0, width, height);
 
-  const opticalYOffset = parseFloat(document.getElementById('spacingOpticalYOffset')?.value) ?? CONFIG.spacing.opticalYOffset;
-  const opticalOffset = height * opticalYOffset;
+  const opticalOffset = height * template.opticalYOffset;
   let currentY = (height - contentHeight) / 2 - opticalOffset;
 
   tempCtx.fillStyle = template.textColor;
@@ -1114,7 +1043,7 @@ async function renderAdToDataUrl(row, template, width, height) {
   elements.forEach((el) => {
     currentY += el.marginTop;
 
-    tempCtx.font = `${template.fontStyle} ${el.weight} ${el.fontSize}px "${template.fontFamily}"`;
+    tempCtx.font = `${el.weight} ${el.fontSize}px "${template.fontFamily}"`;
 
     if (template.letterSpacing !== 0) {
       const charSpacing = el.fontSize * template.letterSpacing;
@@ -1152,39 +1081,43 @@ function loadDefaults() {
   document.getElementById('textColor').value = CONFIG.colors.text;
   document.getElementById('textColorPicker').value = CONFIG.colors.text;
 
-  // Content
-  document.getElementById('introText').value = CONFIG.content.intro;
-  document.getElementById('headlineText1').value = CONFIG.content.headline1;
-  document.getElementById('headlineText2').value = CONFIG.content.headline2;
-  document.getElementById('offerText').value = CONFIG.content.offer;
-  document.getElementById('legendText').value = CONFIG.content.legend;
-
   // Typography
-  const t = CONFIG.typography;
-  document.getElementById('fontFamily').value = t.fontFamily;
-  document.getElementById('fontWeight').value = t.fontWeight;
-  document.getElementById('fontStyle').value = t.fontStyle;
-  document.getElementById('textTransform').value = t.textTransform;
-  document.getElementById('letterSpacing').value = t.letterSpacing;
-  document.getElementById('introSize').value = t.introSize;
-  document.getElementById('introWeight').value = t.introWeight;
-  document.getElementById('introTransform').value = t.introTransform;
-  document.getElementById('headlineSize').value = t.headlineSize;
-  document.getElementById('offerSize').value = t.offerSize;
-  document.getElementById('offerWeight').value = t.offerWeight;
-  document.getElementById('offerTransform').value = t.offerTransform;
-  document.getElementById('legendSize').value = t.legendSize;
-  document.getElementById('legendWeight').value = t.legendWeight;
-  document.getElementById('legendTransform').value = t.legendTransform;
+  document.getElementById('fontFamily').value = CONFIG.typography.fontFamily;
+  document.getElementById('letterSpacing').value = CONFIG.typography.letterSpacing;
+  document.getElementById('opticalYOffset').value = CONFIG.typography.opticalYOffset;
 
-  // Spacing
-  const s = CONFIG.spacing;
-  document.getElementById('spacingOpticalYOffset').value = s.opticalYOffset;
-  document.getElementById('spacingIntroMarginTop').value = s.intro.marginTop;
-  document.getElementById('spacingHeadlineMarginTop').value = s.headline.marginTop;
-  document.getElementById('spacingHeadlineLineHeight').value = s.headline.lineHeight;
-  document.getElementById('spacingOfferMarginTop').value = s.offer.marginTop;
-  document.getElementById('spacingLegendMarginTop').value = s.legend.marginTop;
+  // Elements
+  const e = CONFIG.elements;
+
+  // Intro
+  document.getElementById('introText').value = e.intro.text;
+  document.getElementById('introSize').value = e.intro.size;
+  document.getElementById('introWeight').value = e.intro.weight;
+  document.getElementById('introTransform').value = e.intro.transform;
+  document.getElementById('introMarginTop').value = e.intro.marginTop;
+
+  // Headline
+  document.getElementById('headlineText1').value = e.headline.text[0];
+  document.getElementById('headlineText2').value = e.headline.text[1];
+  document.getElementById('headlineSize').value = e.headline.size;
+  document.getElementById('headlineWeight').value = e.headline.weight;
+  document.getElementById('headlineTransform').value = e.headline.transform;
+  document.getElementById('headlineMarginTop').value = e.headline.marginTop;
+  document.getElementById('headlineLineHeight').value = e.headline.lineHeight;
+
+  // Offer
+  document.getElementById('offerText').value = e.offer.text;
+  document.getElementById('offerSize').value = e.offer.size;
+  document.getElementById('offerWeight').value = e.offer.weight;
+  document.getElementById('offerTransform').value = e.offer.transform;
+  document.getElementById('offerMarginTop').value = e.offer.marginTop;
+
+  // Legend
+  document.getElementById('legendText').value = e.legend.text;
+  document.getElementById('legendSize').value = e.legend.size;
+  document.getElementById('legendWeight').value = e.legend.weight;
+  document.getElementById('legendTransform').value = e.legend.transform;
+  document.getElementById('legendMarginTop').value = e.legend.marginTop;
 }
 
 // Initialize
