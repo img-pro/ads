@@ -139,6 +139,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     if (tabId === 'export') {
       renderVariationCards();
       renderPreview();
+      renderStyleHistory();
     }
   });
 });
@@ -1497,6 +1498,223 @@ function loadDefaults() {
 }
 
 // ==========================================
+// STYLE HISTORY
+// ==========================================
+
+const MAX_STYLE_HISTORY = 8;
+let styleHistory = [];
+let activeStyleIndex = -1;
+
+function loadStyleHistory() {
+  try {
+    const saved = localStorage.getItem('ad_studio_style_history');
+    if (saved) {
+      styleHistory = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('Failed to load style history:', e);
+    styleHistory = [];
+  }
+}
+
+function saveStyleHistory() {
+  try {
+    localStorage.setItem('ad_studio_style_history', JSON.stringify(styleHistory));
+  } catch (e) {
+    console.warn('Failed to save style history:', e);
+  }
+}
+
+async function generateStyleThumbnail() {
+  // Style specimen - a distilled visual representation of the style
+  // Like a font preview showing "Aa" or a color swatch
+
+  const template = getTemplateFromUI();
+  await ensureFontLoaded(template.fontFamily);
+
+  // Thumbnail dimensions - 2:1 ratio, high enough res for retina
+  const thumbWidth = 200;
+  const thumbHeight = 100;
+  const thumbCanvas = document.createElement('canvas');
+  thumbCanvas.width = thumbWidth;
+  thumbCanvas.height = thumbHeight;
+  const ctx = thumbCanvas.getContext('2d');
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const { bgColor, textColor, fontFamily, letterSpacing } = template;
+
+  // 1. Background fill
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, thumbWidth, thumbHeight);
+
+  // 2. Execute background canvas commands (gradients, patterns)
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'background', bgColor, textColor);
+
+  // 3. Set up text styling
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // 4. Execute text layer commands (shadows, strokes, fills)
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'text', bgColor, textColor);
+
+  // 5. Draw specimen text - large "Aa" that shows typography clearly
+  const fontSize = 48;
+  const fontWeight = template.headline.weight || '700';
+  ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
+
+  // Check if stroke was set by AI
+  const hasStroke = ctx.lineWidth > 0 && ctx.strokeStyle && ctx.strokeStyle !== '#000000';
+
+  // Draw with letter spacing if set
+  const text = 'Aa';
+  if (letterSpacing !== 0) {
+    const charSpacing = fontSize * letterSpacing;
+    const totalWidth = ctx.measureText(text).width + (text.length - 1) * charSpacing;
+    let charX = thumbWidth / 2 - totalWidth / 2;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const charWidth = ctx.measureText(char).width;
+      if (hasStroke) ctx.strokeText(char, charX + charWidth / 2, thumbHeight / 2);
+      ctx.fillText(char, charX + charWidth / 2, thumbHeight / 2);
+      charX += charWidth + charSpacing;
+    }
+  } else {
+    if (hasStroke) ctx.strokeText(text, thumbWidth / 2, thumbHeight / 2);
+    ctx.fillText(text, thumbWidth / 2, thumbHeight / 2);
+  }
+
+  // 6. Execute foreground canvas commands (borders, vignettes)
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'foreground', bgColor, textColor);
+
+  return thumbCanvas.toDataURL('image/png', 0.9);
+}
+
+async function addStyleToHistory(prompt, design, canvasCode) {
+  const thumbnail = await generateStyleThumbnail();
+
+  const style = {
+    id: Date.now(),
+    prompt: prompt,
+    thumbnail: thumbnail,
+    design: design,
+    canvas: canvasCode
+  };
+
+  // Add to beginning of array
+  styleHistory.unshift(style);
+
+  // Limit to max items
+  if (styleHistory.length > MAX_STYLE_HISTORY) {
+    styleHistory = styleHistory.slice(0, MAX_STYLE_HISTORY);
+  }
+
+  activeStyleIndex = 0;
+  saveStyleHistory();
+  renderStyleHistory();
+}
+
+function applyStyleFromHistory(index) {
+  const style = styleHistory[index];
+  if (!style) return;
+
+  activeStyleIndex = index;
+
+  // Apply design settings
+  if (style.design) {
+    const d = style.design;
+    if (d.bgColor) {
+      document.getElementById('bgColor').value = d.bgColor;
+      document.getElementById('bgColorPicker').value = d.bgColor;
+    }
+    if (d.textColor) {
+      document.getElementById('textColor').value = d.textColor;
+      document.getElementById('textColorPicker').value = d.textColor;
+    }
+    if (d.fontFamily) {
+      const fontSelect = document.getElementById('fontFamily');
+      const option = Array.from(fontSelect.options).find(o => o.value === d.fontFamily);
+      if (option) {
+        fontSelect.value = d.fontFamily;
+        applyFontPreset(d.fontFamily);
+      }
+    }
+    if (typeof d.fontScale === 'number') {
+      document.getElementById('fontScale').value = d.fontScale;
+    }
+    if (typeof d.letterSpacing === 'number') {
+      document.getElementById('letterSpacing').value = d.letterSpacing;
+    }
+  }
+
+  // Apply canvas commands
+  canvasDecorations = [];
+  if (style.canvas) {
+    if (style.canvas.background) {
+      const bgCmd = parseDrawingCode(style.canvas.background, 'background');
+      if (bgCmd) canvasDecorations.push(bgCmd);
+    }
+    if (style.canvas.text) {
+      const textCmd = parseDrawingCode(style.canvas.text, 'text');
+      if (textCmd) canvasDecorations.push(textCmd);
+    }
+    if (style.canvas.foreground) {
+      const fgCmd = parseDrawingCode(style.canvas.foreground, 'foreground');
+      if (fgCmd) canvasDecorations.push(fgCmd);
+    }
+  }
+
+  // Update prompt field
+  const promptEl = document.getElementById('stylePrompt');
+  if (promptEl && style.prompt) {
+    promptEl.value = style.prompt;
+  }
+
+  generateAd();
+  renderStyleHistory();
+}
+
+function deleteStyleFromHistory(index, event) {
+  event.stopPropagation();
+  styleHistory.splice(index, 1);
+
+  if (activeStyleIndex === index) {
+    activeStyleIndex = -1;
+  } else if (activeStyleIndex > index) {
+    activeStyleIndex--;
+  }
+
+  saveStyleHistory();
+  renderStyleHistory();
+}
+
+function renderStyleHistory() {
+  const containers = [
+    document.getElementById('styleHistory'),
+    document.getElementById('styleHistoryExport')
+  ];
+
+  const html = styleHistory.map((style, index) => `
+    <div class="style-thumb${index === activeStyleIndex ? ' active' : ''}"
+         onclick="applyStyleFromHistory(${index})"
+         title="${style.prompt || 'Untitled style'}">
+      <img src="${style.thumbnail}" alt="Style ${index + 1}">
+      <button class="style-thumb-delete" onclick="deleteStyleFromHistory(${index}, event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  containers.forEach(container => {
+    if (container) container.innerHTML = html;
+  });
+}
+
+// ==========================================
 // AI CANVAS STYLING
 // ==========================================
 
@@ -1586,10 +1804,10 @@ async function applyCanvasStyle() {
 
 ## THE AD
 This is a performance marketing ad with a clear typographic hierarchy:
-- INTRO: Small qualifier text (identifies the audience)
-- HEADLINE: The hero text, largest element, emotional hook (usually 2 lines)
-- OFFER: Clear call-to-action
-- LEGEND: Small trust signal or friction remover
+- INTRO (Whisper): Small qualifier text, identifies the audience
+- HEADLINE (Shout): The hero text, largest element, emotional hook — 50% of visual weight
+- OFFER (Speak): Clear call-to-action
+- LEGEND (Murmur): Small trust signal or friction remover
 
 The text is ALWAYS the hero. Every design decision must serve readability and impact.
 
@@ -1619,38 +1837,31 @@ Key principles:
 1. DESIGN (UI controls):
    - bgColor: hex color
    - textColor: hex color
-   - fontFamily: [Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Bebas Neue, Oswald, Anton, Barlow Condensed, Archivo Black, Roboto, Open Sans, Lato, Helvetica]
+   - fontFamily: Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Bebas Neue, Oswald, Anton, Barlow Condensed, Archivo Black, Roboto, Open Sans, Lato, Helvetica
    - fontScale: 0.5-1.5
    - letterSpacing: -0.05 to 0.15
 
 2. CANVAS (JS code for Canvas 2D API):
-   Parameters: ctx, w, h, bg, fg
+   Parameters available: ctx, w, h, bg, fg
 
-   Three layers:
-   - "background": After fill, before text. Gradients, subtle patterns, atmosphere.
-   - "text": Context state for text rendering. Shadows for depth, subtle effects.
+   Three layers you can use:
+   - "background": After solid fill, before text. Use for gradients, subtle patterns, atmosphere.
+   - "text": Context state for text rendering. Set shadowColor, shadowBlur, shadowOffsetX/Y, fillStyle, strokeStyle, lineWidth here. State persists for text drawing.
    - "foreground": After text. Borders, vignettes, finishing touches.
 
 ## CRITICAL RULES
 - NEVER reduce text legibility
 - Shadows should lift text, not muddy it
 - If using text shadows: subtle blur (8-20px), low opacity (0.2-0.4)
-- Hard drop shadows: small offset (2-4px), dark but not black
-- Background effects stay in background - never compete with text
+- Background effects stay in background — never compete with text
 - Borders and frames: thin, subtle, purposeful
 - When in doubt, do less
 
-Return JSON:
+Return ONLY valid JSON:
 {
-  "design": { ... },
-  "canvas": {
-    "background": "// code",
-    "text": "// code",
-    "foreground": "// code"
-  }
-}
-
-Return ONLY the JSON object.`
+  "design": { "bgColor": "#...", "textColor": "#...", "fontFamily": "...", "fontScale": 1, "letterSpacing": 0 },
+  "canvas": { "background": "// JS code or empty string", "text": "// JS code or empty string", "foreground": "// JS code or empty string" }
+}`
         }]
       })
     });
@@ -1721,6 +1932,9 @@ Return ONLY the JSON object.`
     // Re-render the ad with new settings and canvas commands
     generateAd();
 
+    // Add to style history (after generateAd so canvas is rendered with new style)
+    await addStyleToHistory(prompt, styles.design, styles.canvas);
+
   } catch (error) {
     console.error('AI Style error:', error);
     alert('Error applying style: ' + error.message);
@@ -1732,7 +1946,9 @@ Return ONLY the JSON object.`
 function clearCanvasStyle() {
   // Clear canvas drawing commands and re-render
   canvasDecorations = [];
+  activeStyleIndex = -1;
   generateAd();
+  renderStyleHistory();
 
   // Clear prompt
   const promptEl = document.getElementById('stylePrompt');
@@ -1741,10 +1957,12 @@ function clearCanvasStyle() {
 
 function resetBuilder() {
   // Clear localStorage for builder state
-  localStorage.removeItem('adStudioState');
+  localStorage.removeItem('ad_studio_state');
 
-  // Clear canvas commands
+  // Clear canvas commands and deselect style
   canvasDecorations = [];
+  activeStyleIndex = -1;
+  renderStyleHistory();
 
   // Clear style prompt
   const promptEl = document.getElementById('stylePrompt');
@@ -1767,6 +1985,8 @@ if (!hasStoredState) {
   loadDefaults();
 }
 updateApiKeyStatus();
+loadStyleHistory();
+renderStyleHistory();
 // Render size lists based on saved platform or default
 const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
 renderSizeList(sizePlatform);
