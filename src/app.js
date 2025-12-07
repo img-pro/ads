@@ -572,10 +572,14 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
   targetCtx.textAlign = 'center';
   targetCtx.textBaseline = 'top';
 
+  // Reset lineWidth before text commands so we can detect if AI sets it
+  targetCtx.lineWidth = 0;
+
   // Text styling commands
   executeCanvasCommands(targetCtx, width, height, 'text', bgColor, textColor);
 
-  const hasStroke = targetCtx.lineWidth > 0 && targetCtx.strokeStyle && targetCtx.strokeStyle !== '#000000';
+  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
+  const hasStroke = targetCtx.lineWidth > 0;
 
   // Draw text elements
   elements.forEach((el) => {
@@ -869,6 +873,7 @@ function saveAppState() {
       data: {
         variations: dataRows,
         aiPrompt: document.getElementById('aiPrompt')?.value,
+        aiLanguage: document.getElementById('aiLanguage')?.value,
         aiVariationCount: document.getElementById('aiVariationCount')?.value,
         systemPrompt: document.getElementById('systemPrompt')?.value
       },
@@ -920,6 +925,10 @@ function loadAppState() {
       if (state.data.aiPrompt) {
         const prompt = document.getElementById('aiPrompt');
         if (prompt) prompt.value = state.data.aiPrompt;
+      }
+      if (state.data.aiLanguage) {
+        const lang = document.getElementById('aiLanguage');
+        if (lang) lang.value = state.data.aiLanguage;
       }
       if (state.data.aiVariationCount) {
         const count = document.getElementById('aiVariationCount');
@@ -1290,10 +1299,22 @@ async function generateWithAI() {
   }
 
   const variationCount = parseInt(document.getElementById('aiVariationCount')?.value) || 8;
+  const language = document.getElementById('aiLanguage')?.value || 'en';
   const btn = document.getElementById('generateBtn');
   btn?.classList.add('loading');
 
   const systemPrompt = getSystemPrompt();
+
+  // Language names for the prompt
+  const languageNames = {
+    en: 'English', es: 'Spanish', fr: 'French', de: 'German',
+    it: 'Italian', pt: 'Portuguese', nl: 'Dutch', pl: 'Polish',
+    ru: 'Russian', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', ar: 'Arabic'
+  };
+  const languageName = languageNames[language] || 'English';
+  const languageInstruction = language !== 'en'
+    ? `\n\n## Language\nWrite ALL copy in ${languageName}. The output must be entirely in ${languageName}, not English.`
+    : '';
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1312,7 +1333,7 @@ async function generateWithAI() {
           content: `${systemPrompt}
 
 ## Brief from user:
-${prompt}
+${prompt}${languageInstruction}
 
 ## Output format
 Generate exactly ${variationCount} variations exploring different emotional angles (aspiration, fear, belonging, control, simplicity). Each variation must have:
@@ -1557,6 +1578,9 @@ async function generateStyleThumbnail() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
+  // Reset lineWidth before text commands so we can detect if AI sets it
+  ctx.lineWidth = 0;
+
   // 4. Execute text layer commands (shadows, strokes, fills)
   executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'text', bgColor, textColor);
 
@@ -1565,8 +1589,8 @@ async function generateStyleThumbnail() {
   const fontWeight = template.headline.weight || '700';
   ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
 
-  // Check if stroke was set by AI
-  const hasStroke = ctx.lineWidth > 0 && ctx.strokeStyle && ctx.strokeStyle !== '#000000';
+  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
+  const hasStroke = ctx.lineWidth > 0;
 
   // Draw with letter spacing if set
   const text = 'Aa';
@@ -1673,6 +1697,7 @@ function applyStyleFromHistory(index) {
   }
 
   generateAd();
+  renderPreview();
   renderStyleHistory();
 }
 
