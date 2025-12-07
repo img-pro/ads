@@ -173,6 +173,38 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 // ==========================================
+// KEYBOARD NAVIGATION
+// ==========================================
+
+document.addEventListener('keydown', (e) => {
+  // Only handle arrow keys on Export tab when no input is focused
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+  const activeElement = document.activeElement;
+  const isInputFocused = activeElement.tagName === 'INPUT' ||
+                         activeElement.tagName === 'TEXTAREA' ||
+                         activeElement.tagName === 'SELECT';
+  if (isInputFocused) return;
+
+  // Check if Export tab is active
+  const exportTab = document.getElementById('export-tab');
+  if (!exportTab || !exportTab.classList.contains('active')) return;
+
+  // Navigate variations
+  if (dataRows.length === 0) return;
+
+  e.preventDefault();
+
+  if (e.key === 'ArrowUp') {
+    const newIndex = activeVariationIndex > 0 ? activeVariationIndex - 1 : dataRows.length - 1;
+    selectVariation(newIndex);
+  } else if (e.key === 'ArrowDown') {
+    const newIndex = activeVariationIndex < dataRows.length - 1 ? activeVariationIndex + 1 : 0;
+    selectVariation(newIndex);
+  }
+});
+
+// ==========================================
 // SECTION TOGGLES
 // ==========================================
 
@@ -1523,6 +1555,165 @@ document.getElementById('selectAllExport')?.addEventListener('change', (e) => {
 });
 
 // ==========================================
+// DATA IMPORT/EXPORT (CSV)
+// ==========================================
+
+function exportDataCSV() {
+  if (dataRows.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  const headers = ['intro', 'headline1', 'headline2', 'offer', 'legend'];
+  const csvRows = [headers.join(',')];
+
+  dataRows.forEach(row => {
+    const values = headers.map(h => {
+      const val = row[h] || '';
+      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return '"' + val.replace(/"/g, '""') + '"';
+      }
+      return val;
+    });
+    csvRows.push(values.join(','));
+  });
+
+  const csv = csvRows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ad-variations.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importDataCSV() {
+  document.getElementById('csvFileInput').click();
+}
+
+function handleCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+
+    if (rows.length === 0) {
+      alert('No data found in file');
+      return;
+    }
+
+    // Detect headers
+    const firstRow = rows[0].map(c => c.toLowerCase().trim());
+    const headerMap = {};
+    const knownHeaders = ['intro', 'headline1', 'headline2', 'offer', 'legend', 'headline 1', 'headline 2'];
+
+    let hasHeaders = false;
+    firstRow.forEach((cell, i) => {
+      if (knownHeaders.includes(cell)) {
+        hasHeaders = true;
+        // Normalize header names
+        const normalized = cell.replace(' ', '');
+        headerMap[normalized] = i;
+      }
+    });
+
+    // If no headers detected, assume column order: intro, headline1, headline2, offer, legend
+    if (!hasHeaders) {
+      headerMap.intro = 0;
+      headerMap.headline1 = 1;
+      headerMap.headline2 = 2;
+      headerMap.offer = 3;
+      headerMap.legend = 4;
+    }
+
+    const dataStartIndex = hasHeaders ? 1 : 0;
+    const importedRows = [];
+
+    for (let i = dataStartIndex; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.every(cell => !cell.trim())) continue; // Skip empty rows
+
+      importedRows.push({
+        intro: row[headerMap.intro] || '',
+        headline1: row[headerMap.headline1] || '',
+        headline2: row[headerMap.headline2] || '',
+        offer: row[headerMap.offer] || '',
+        legend: row[headerMap.legend] || '',
+        selected: true
+      });
+    }
+
+    if (importedRows.length === 0) {
+      alert('No valid rows found in file');
+      return;
+    }
+
+    // Add to existing data
+    dataRows.push(...importedRows);
+    saveAppStateDebounced();
+    renderDataTable();
+    renderVariationCards();
+
+    alert(`Imported ${importedRows.length} row${importedRows.length > 1 ? 's' : ''}`);
+  };
+
+  reader.readAsText(file);
+  // Reset input so same file can be imported again
+  event.target.value = '';
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let currentRow = [];
+  let currentCell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++; // Skip next quote
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',' || char === '\t') {
+        currentRow.push(currentCell.trim());
+        currentCell = '';
+      } else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+        currentRow.push(currentCell.trim());
+        if (currentRow.length > 0) rows.push(currentRow);
+        currentRow = [];
+        currentCell = '';
+        if (char === '\r') i++; // Skip \n in \r\n
+      } else if (char !== '\r') {
+        currentCell += char;
+      }
+    }
+  }
+
+  // Don't forget last cell/row
+  if (currentCell || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(cell => cell)) rows.push(currentRow);
+  }
+
+  return rows;
+}
+
+// ==========================================
 // EXPORT SIZE LIST
 // ==========================================
 
@@ -2029,13 +2220,19 @@ async function applyVersion(index) {
     if (el && val !== undefined && val !== null) el.value = val;
   };
 
-  const setColor = (pickerId, textId, val) => {
+  const setColor = (pickerId, textId, val, isGlobal = false) => {
+    const textEl = document.getElementById(textId);
+    const picker = document.getElementById(pickerId);
+
     if (val) {
-      setVal(textId, val);
-      const picker = document.getElementById(pickerId);
+      if (textEl) textEl.value = val;
       if (picker && /^#[0-9A-Fa-f]{6}$/i.test(val)) {
         picker.value = val;
       }
+    } else if (!isGlobal) {
+      // For per-element colors, empty value means "inherit from global"
+      if (textEl) textEl.value = '';
+      if (picker) picker.value = '#FFFFFF';
     }
   };
 
@@ -2043,9 +2240,9 @@ async function applyVersion(index) {
   setVal('width', version.width);
   setVal('height', version.height);
 
-  // Colors
-  setColor('bgColorPicker', 'bgColor', version.bgColor);
-  setColor('textColorPicker', 'textColor', version.textColor);
+  // Colors (global colors should always have a value)
+  setColor('bgColorPicker', 'bgColor', version.bgColor, true);
+  setColor('textColorPicker', 'textColor', version.textColor, true);
 
   // Global Typography
   setVal('fontFamily', version.fontFamily);
