@@ -2223,7 +2223,7 @@ textarea:focus-visible {
   color: var(--text-tertiary);
 }
 
-/* Dim the layer label when opacity is 0 */
-.layer-row:has(input[type="range"][value="0"]) .layer-label {
+/* Dim the layer label when opacity is 0 (class toggled via JS) */
+.layer-row.layer-disabled .layer-label {
   color: var(--text-muted);
 }

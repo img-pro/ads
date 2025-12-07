@@ -300,6 +300,10 @@ function setupLayerControls() {
         const valEl = document.getElementById(`${id}Val`);
         if (valEl) valEl.textContent = Math.round(parseFloat(el.value) * 100) + '%';
 
+        // Toggle disabled class on layer row (CSS attribute selectors don't track JS property changes)
+        const layerRow = el.closest('.layer-row');
+        if (layerRow) layerRow.classList.toggle('layer-disabled', parseFloat(el.value) === 0);
+
         // Throttle generateAd calls using requestAnimationFrame
         if (!layerRafPending) {
           layerRafPending = true;
@@ -322,6 +326,9 @@ function resetLayerOpacities() {
     if (el) {
       el.value = 1;
       if (valEl) valEl.textContent = '100%';
+      // Remove disabled class since opacity is now 100%
+      const layerRow = el.closest('.layer-row');
+      if (layerRow) layerRow.classList.remove('layer-disabled');
     }
   });
 }
@@ -2024,11 +2031,11 @@ function getCurrentVersion() {
       foreground: getNum('fgLayerOpacity')
     },
 
-    // AI Canvas commands (stored as code strings for re-parsing)
+    // AI Canvas effects (stored as effect names for lookup in EFFECT_LIBRARY)
     canvas: {
-      background: canvasDecorations.find(c => c.layer === 'background')?.code || null,
-      text: canvasDecorations.find(c => c.layer === 'text')?.code || null,
-      foreground: canvasDecorations.find(c => c.layer === 'foreground')?.code || null
+      background: canvasDecorations.find(c => c.layer === 'background')?.effectName || null,
+      text: canvasDecorations.find(c => c.layer === 'text')?.effectName || null,
+      foreground: canvasDecorations.find(c => c.layer === 'foreground')?.effectName || null
     },
 
     // Style prompt for reference
@@ -2120,28 +2127,39 @@ async function applyVersion(index) {
     setVal('bgLayerOpacity', version.layers.background);
     setVal('textLayerOpacity', version.layers.text);
     setVal('fgLayerOpacity', version.layers.foreground);
-    // Update displays
+    // Update displays and disabled class
     ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
       const el = document.getElementById(id);
       const valEl = document.getElementById(`${id}Val`);
       if (el && valEl) valEl.textContent = Math.round(parseFloat(el.value) * 100) + '%';
+      const layerRow = el?.closest('.layer-row');
+      if (layerRow) layerRow.classList.toggle('layer-disabled', parseFloat(el.value) === 0);
     });
   }
 
-  // AI Canvas commands
+  // AI Canvas effects (lookup from EFFECT_LIBRARY by name)
   canvasDecorations = [];
   if (version.canvas) {
-    if (version.canvas.background) {
-      const cmd = parseDrawingCode(version.canvas.background, 'background');
-      if (cmd) canvasDecorations.push(cmd);
+    if (version.canvas.background && EFFECT_LIBRARY.background[version.canvas.background]) {
+      canvasDecorations.push({
+        layer: 'background',
+        draw: EFFECT_LIBRARY.background[version.canvas.background],
+        effectName: version.canvas.background
+      });
     }
-    if (version.canvas.text) {
-      const cmd = parseDrawingCode(version.canvas.text, 'text');
-      if (cmd) canvasDecorations.push(cmd);
+    if (version.canvas.text && EFFECT_LIBRARY.text[version.canvas.text]) {
+      canvasDecorations.push({
+        layer: 'text',
+        draw: EFFECT_LIBRARY.text[version.canvas.text],
+        effectName: version.canvas.text
+      });
     }
-    if (version.canvas.foreground) {
-      const cmd = parseDrawingCode(version.canvas.foreground, 'foreground');
-      if (cmd) canvasDecorations.push(cmd);
+    if (version.canvas.foreground && EFFECT_LIBRARY.foreground[version.canvas.foreground]) {
+      canvasDecorations.push({
+        layer: 'foreground',
+        draw: EFFECT_LIBRARY.foreground[version.canvas.foreground],
+        effectName: version.canvas.foreground
+      });
     }
   }
 
@@ -2380,15 +2398,31 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
   // For text layer, apply opacity to shadows/effects only
   // The actual text fill will be drawn at full opacity, but shadows/strokes will be dimmed
   if (layer === 'text' && layerOverride.opacity !== 1) {
-    // Helper to scale color alpha
+    // Helper to scale color alpha (supports hex and rgba formats)
     const scaleColorAlpha = (color, opacity) => {
       if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return color;
-      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-      if (match) {
-        const r = match[1], g = match[2], b = match[3];
-        const a = match[4] !== undefined ? parseFloat(match[4]) : 1;
+
+      // Handle hex colors (#RGB, #RRGGBB)
+      const hexMatch = color.match(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
+      if (hexMatch) {
+        let hex = hexMatch[1];
+        if (hex.length === 3) {
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+
+      // Handle rgba/rgb colors
+      const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1], g = rgbaMatch[2], b = rgbaMatch[3];
+        const a = rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1;
         return `rgba(${r}, ${g}, ${b}, ${a * opacity})`;
       }
+
       return color;
     };
 
@@ -2465,10 +2499,22 @@ async function applyCanvasStyle() {
   const currentState = {
     bgColor: document.getElementById('bgColor')?.value,
     textColor: document.getElementById('textColor')?.value,
-    fontFamily: document.getElementById('fontFamily')?.value,
-    fontScale: document.getElementById('fontScale')?.value,
-    letterSpacing: document.getElementById('letterSpacing')?.value
+    fontFamily: document.getElementById('fontFamily')?.value
   };
+
+  // Build the effect options list from EFFECT_LIBRARY
+  const bgEffects = Object.keys(EFFECT_LIBRARY.background).join(', ');
+  const textEffects = Object.keys(EFFECT_LIBRARY.text).join(', ');
+  const fgEffects = Object.keys(EFFECT_LIBRARY.foreground).join(', ');
+
+  // Build font list from FONT_MOODS with descriptions (shuffled to avoid AI bias)
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  const shuffledMoods = shuffle(Object.entries(FONT_MOODS));
+  const fontList = shuffledMoods.map(([mood, data]) => {
+    const shuffledFonts = shuffle(data.fonts);
+    const fontEntries = shuffledFonts.map(f => `${f.name} (${f.desc})`).join(', ');
+    return `${mood.toUpperCase()}: ${data.description}\n       → ${fontEntries}`;
+  }).join('\n     ');
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2480,38 +2526,19 @@ async function applyCanvasStyle() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5-20251101',
-        max_tokens: 4096,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `You are a world-class advertising art director. Style this ad based on the request:
+          content: `You are a world-class advertising art director. Style this ad:
 
 "${prompt}"
 
-## THE AD
-This is a performance marketing ad with a clear typographic hierarchy:
-- INTRO (Whisper): Small qualifier text, identifies the audience
-- HEADLINE (Shout): The hero text, largest element, emotional hook — 50% of visual weight
-- OFFER (Speak): Clear call-to-action
-- LEGEND (Murmur): Small trust signal or friction remover
-
-The text is ALWAYS the hero. Every design decision must serve readability and impact.
-
-## DESIGN PRINCIPLES
-Study these references:
-- Apple: Pristine simplicity, massive typography, restrained color, perfect contrast
-- Nike: Bold, kinetic, high contrast, typography as graphic element
-- Spotify: Vibrant duotones, energetic gradients, modern and fresh
-- Stripe: Sophisticated gradients, subtle depth, premium feel
-- Linear: Dark mode excellence, subtle glows, refined minimalism
-
-Key principles:
-- Contrast is king. Text must pop immediately.
-- Restraint over decoration. Every element must earn its place.
-- Typography IS the design. Don't compete with it.
-- Shadows add depth, not noise. Subtle and purposeful.
-- Color harmony matters. 2-3 colors maximum.
-- White space is active design, not emptiness.
+## DESIGN PHILOSOPHY
+- Typography is 80% of the design — the ad must look stunning with ZERO effects
+- Color creates mood, contrast creates readability (minimum 4.5:1 ratio)
+- Effects enhance, never compete — when in doubt, use "none"
+- Restraint over decoration — every choice must earn its place
 
 ## CURRENT STATE
 - Background: ${currentState.bgColor}
@@ -2520,56 +2547,40 @@ Key principles:
 
 ## YOUR CONTROLS
 
-1. DESIGN (global settings):
-   - bgColor: hex color for background
-   - textColor: hex color for text (one color, hierarchy comes from size/weight)
-   - fontFamily: Choose ONE font that matches the mood (MUST be exactly one of these):
-     Display fonts (bold, impactful): Bebas Neue, Anton, Oswald, Archivo Black, Barlow Condensed
-     Text fonts (readable, modern): Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Roboto, Open Sans, Lato
-     System fonts: Helvetica
-   - fontScale: 0.5-1.5 (overall text size)
-   - letterSpacing: -0.05 to 0.15
+1. COLORS (required)
+   - bgColor: hex color (e.g., "#0A0A0A")
+   - textColor: hex color with strong contrast against bgColor
 
-2. CANVAS (your creative playground — JS code for Canvas 2D API):
-   This is where you create atmosphere, depth, and visual interest.
-   Parameters available: ctx, w, h, bg, fg
+2. TYPOGRAPHY (required)
+   - fontFamily: Choose ONE font that best matches the ad's mood and message:
+     ${fontList}
+   - fontScale: 0.85-1.15 (subtle size adjustment, 1.0 is default)
+   - letterSpacing: -0.02 to 0.05 (subtle spacing adjustment)
 
-   Three layers you control:
+3. EFFECTS (optional — select by name, or "none")
+   Background effects: ${bgEffects}
+   Text effects: ${textEffects}
+   Foreground effects: ${fgEffects}
 
-   "background" — Runs AFTER solid fill, BEFORE text
-   Create depth and atmosphere behind the text:
-   - Gradients: linear, radial, multi-stop color transitions
-   - Geometric shapes: circles, rectangles, abstract forms
-   - Patterns: grids, dots, lines, noise textures
-   - Light effects: glows, spotlights, ambient color washes
-   Example: ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(0,h*0.7,w,h*0.3);
-
-   "text" — Sets context state for text rendering
-   Make text pop with subtle effects:
-   - Shadows: ctx.shadowColor, shadowBlur, shadowOffsetX/Y
-   - Glow effects: colored shadows with blur
-   - Stroke outlines: ctx.strokeStyle, lineWidth (use sparingly)
-   Example: ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10;
-
-   "foreground" — Runs AFTER text
-   Finishing touches that frame the composition:
-   - Borders and frames
-   - Vignettes (darkened edges)
-   - Overlays and gradients
-   - Decorative elements that don't compete with text
-   Example: ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.strokeRect(20,20,w-40,h-40);
+## EFFECT GUIDANCE
+- Dark backgrounds: "shadow-soft", "shadow-medium", or "lift" work well
+- Light backgrounds: "shadow-hard" adds punch
+- Minimalist: Use "none" for all — confident simplicity
+- Premium/luxury: "gradient-radial" + "glow-soft" + "vignette-light"
+- Bold/impactful: "gradient-diagonal" + "shadow-dramatic"
+- Clean/modern: "none" or "gradient-subtle" + "shadow-soft"
 
 ## CRITICAL RULES
-- Text legibility is sacred. Never reduce it.
-- Background creates mood, it doesn't compete with text.
-- Text shadows should lift, not muddy. Keep blur 8-20px, opacity 0.2-0.4.
-- Foreground elements frame, they don't distract.
-- When in doubt, do less. Empty canvas sections are fine.
+- ALWAYS ensure high contrast between bgColor and textColor
+- Typography IS the design — effects are optional enhancement
+- "none" is often the best choice for text and foreground effects
+- Pick at most ONE effect per layer
 
 Return ONLY valid JSON:
 {
-  "design": { "bgColor": "#...", "textColor": "#...", "fontFamily": "...", "fontScale": 1, "letterSpacing": 0 },
-  "canvas": { "background": "// JS code or empty string", "text": "// JS code", "foreground": "" }
+  "colors": { "bgColor": "#...", "textColor": "#..." },
+  "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
+  "effects": { "background": "none", "text": "none", "foreground": "none" }
 }`
         }]
       })
@@ -2594,58 +2605,83 @@ Return ONLY valid JSON:
     // Clear previous canvas commands
     canvasDecorations = [];
 
-    // Apply design changes (actual ad controls)
-    if (styles.design) {
-      const d = styles.design;
+    // Apply colors with contrast validation
+    if (styles.colors) {
+      let bgColor = styles.colors.bgColor;
+      let textColor = styles.colors.textColor;
 
-      if (d.bgColor && /^#[0-9A-Fa-f]{6}$/.test(d.bgColor)) {
-        document.getElementById('bgColor').value = d.bgColor.toUpperCase();
-        document.getElementById('bgColorPicker').value = d.bgColor;
+      if (bgColor && /^#[0-9A-Fa-f]{6}$/.test(bgColor)) {
+        // Validate and fix contrast if needed
+        if (textColor && /^#[0-9A-Fa-f]{6}$/.test(textColor)) {
+          textColor = ensureContrast(bgColor, textColor);
+        } else {
+          textColor = ensureContrast(bgColor, '#FFFFFF');
+        }
+
+        document.getElementById('bgColor').value = bgColor.toUpperCase();
+        document.getElementById('bgColorPicker').value = bgColor;
+        document.getElementById('textColor').value = textColor.toUpperCase();
+        document.getElementById('textColorPicker').value = textColor;
       }
-      if (d.textColor && /^#[0-9A-Fa-f]{6}$/.test(d.textColor)) {
-        document.getElementById('textColor').value = d.textColor.toUpperCase();
-        document.getElementById('textColorPicker').value = d.textColor;
-      }
-      if (d.fontFamily) {
+    }
+
+    // Apply typography
+    if (styles.typography) {
+      const t = styles.typography;
+
+      if (t.fontFamily) {
         const fontSelect = document.getElementById('fontFamily');
         // Try exact match first, then case-insensitive match
-        let option = Array.from(fontSelect.options).find(o => o.value === d.fontFamily);
+        let option = Array.from(fontSelect.options).find(o => o.value === t.fontFamily);
         if (!option) {
           option = Array.from(fontSelect.options).find(o =>
-            o.value.toLowerCase() === d.fontFamily.toLowerCase()
+            o.value.toLowerCase() === t.fontFamily.toLowerCase()
           );
         }
         if (option) {
           fontSelect.value = option.value;
           applyFontPreset(option.value);
         } else {
-          console.warn('AI returned unknown font:', d.fontFamily);
+          console.warn('AI returned unknown font:', t.fontFamily);
         }
       }
-      if (typeof d.fontScale === 'number' && d.fontScale >= 0.5 && d.fontScale <= 1.5) {
-        document.getElementById('fontScale').value = d.fontScale;
+      if (typeof t.fontScale === 'number' && t.fontScale >= 0.5 && t.fontScale <= 1.5) {
+        document.getElementById('fontScale').value = t.fontScale;
       }
-      if (typeof d.letterSpacing === 'number' && d.letterSpacing >= -0.05 && d.letterSpacing <= 0.15) {
-        document.getElementById('letterSpacing').value = d.letterSpacing;
+      if (typeof t.letterSpacing === 'number' && t.letterSpacing >= -0.05 && t.letterSpacing <= 0.15) {
+        document.getElementById('letterSpacing').value = t.letterSpacing;
       }
-
-      // Note: Per-element typography (sizes, weights, transforms) is left to the user.
-      // AI controls mood (colors, font, atmosphere), user fine-tunes hierarchy.
     }
 
-    // Parse and store canvas drawing commands
-    if (styles.canvas) {
-      if (styles.canvas.background) {
-        const bgCmd = parseDrawingCode(styles.canvas.background, 'background');
-        if (bgCmd) canvasDecorations.push(bgCmd);
+    // Apply effects from library (selection-based, not code generation)
+    if (styles.effects) {
+      const e = styles.effects;
+
+      // Background effect
+      if (e.background && e.background !== 'none' && EFFECT_LIBRARY.background[e.background]) {
+        canvasDecorations.push({
+          layer: 'background',
+          draw: EFFECT_LIBRARY.background[e.background],
+          effectName: e.background
+        });
       }
-      if (styles.canvas.text) {
-        const textCmd = parseDrawingCode(styles.canvas.text, 'text');
-        if (textCmd) canvasDecorations.push(textCmd);
+
+      // Text effect
+      if (e.text && e.text !== 'none' && EFFECT_LIBRARY.text[e.text]) {
+        canvasDecorations.push({
+          layer: 'text',
+          draw: EFFECT_LIBRARY.text[e.text],
+          effectName: e.text
+        });
       }
-      if (styles.canvas.foreground) {
-        const fgCmd = parseDrawingCode(styles.canvas.foreground, 'foreground');
-        if (fgCmd) canvasDecorations.push(fgCmd);
+
+      // Foreground effect
+      if (e.foreground && e.foreground !== 'none' && EFFECT_LIBRARY.foreground[e.foreground]) {
+        canvasDecorations.push({
+          layer: 'foreground',
+          draw: EFFECT_LIBRARY.foreground[e.foreground],
+          effectName: e.foreground
+        });
       }
     }
 
@@ -2655,7 +2691,7 @@ Return ONLY valid JSON:
     // Update layers card visibility
     updateLayersCardVisibility();
 
-    // Re-render the ad with new settings and canvas commands
+    // Re-render the ad with new settings and effects
     generateAd();
 
     // Auto-save as a version
@@ -2715,32 +2751,39 @@ function resetBuilder() {
 // ==========================================
 
 // Initialize
-const hasStoredState = loadAppState();
-if (!hasStoredState) {
-  loadDefaults();
-}
-updateApiKeyStatus();
-loadVersions();
-renderVersions();
+(async function init() {
+  const hasStoredState = loadAppState();
+  if (!hasStoredState) {
+    loadDefaults();
+  }
+  updateApiKeyStatus();
+  loadVersions();
+  renderVersions();
 
-// Restore active version (if any was saved)
-if (typeof window._pendingActiveVersionIndex === 'number' && savedVersions[window._pendingActiveVersionIndex]) {
-  applyVersion(window._pendingActiveVersionIndex);
-  delete window._pendingActiveVersionIndex;
-}
+  // Restore active version (if any was saved) - must await to prevent race
+  let restoredVersion = false;
+  if (typeof window._pendingActiveVersionIndex === 'number' && savedVersions[window._pendingActiveVersionIndex]) {
+    await applyVersion(window._pendingActiveVersionIndex);
+    delete window._pendingActiveVersionIndex;
+    restoredVersion = true;
+  }
 
-// Render size lists based on saved platform or default
-const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
-renderSizeList(sizePlatform);
-const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
-renderExportSizeList(exportPlatform);
-renderDataTable();
-renderVariationCards();
-updateExportSummary();
+  // Render size lists based on saved platform or default
+  const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
+  renderSizeList(sizePlatform);
+  const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
+  renderExportSizeList(exportPlatform);
+  renderDataTable();
+  renderVariationCards();
+  updateExportSummary();
 
-// Set up new controls
-setupElementColorPickers();
-setupLayerControls();
-updateLayersCardVisibility();
+  // Set up new controls
+  setupElementColorPickers();
+  setupLayerControls();
+  updateLayersCardVisibility();
 
-document.fonts.ready.then(() => generateAd());
+  // Only call generateAd if we didn't already via applyVersion
+  if (!restoredVersion) {
+    document.fonts.ready.then(() => generateAd());
+  }
+})();
