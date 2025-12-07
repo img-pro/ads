@@ -119,11 +119,6 @@ body {
   flex-shrink: 0;
 }
 
-.toolbar-brand {
-  display: flex;
-  align-items: center;
-}
-
 .toolbar-title {
   font-size: 14px;
   font-weight: 600;
@@ -293,7 +288,7 @@ body {
 }
 
 .section-header:hover {
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .section-title {
@@ -305,13 +300,15 @@ body {
 }
 
 .section-hint {
-  font-size: 10px;
-  font-weight: 400;
+  font-size: 9px;
+  font-weight: 500;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  background: var(--surface-inset);
+  border-radius: 3px;
   margin-left: 8px;
-  flex: 1;
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .section-toggle {
@@ -757,10 +754,7 @@ canvas {
   transition: bottom var(--transition-fast);
 }
 
-/* Move canvas info down when no style history */
-.canvas-area:not(:has(.style-thumb)) .canvas-info {
-  bottom: 16px;
-}
+/* Canvas info stays above version strip (which is always visible now) */
 
 /* ==========================================
    STYLE HISTORY
@@ -781,8 +775,8 @@ canvas {
   z-index: 2;
 }
 
-.style-history:empty,
-.style-history:not(:has(.style-thumb)) {
+/* Hide when truly empty (no save button and no thumbs) */
+.style-history:empty {
   display: none;
 }
 
@@ -796,7 +790,6 @@ canvas {
   height: 32px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  overflow: hidden;
   border: 2px solid var(--border-subtle);
   transition:
     border-color var(--transition-fast),
@@ -815,6 +808,7 @@ canvas {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: calc(var(--radius-sm) - 2px);
 }
 
 .style-thumb:hover {
@@ -836,10 +830,11 @@ canvas {
     inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
+/* Delete button - positioned outside the thumb bounds */
 .style-thumb-delete {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -8px;
+  right: -8px;
   width: 18px;
   height: 18px;
   background: var(--bg-elevated);
@@ -857,6 +852,7 @@ canvas {
     transform var(--transition-fast),
     background var(--transition-fast),
     color var(--transition-fast);
+  z-index: 2;
 }
 
 .style-thumb:hover .style-thumb-delete {
@@ -873,6 +869,44 @@ canvas {
 .style-thumb-delete svg {
   width: 10px;
   height: 10px;
+}
+
+/* Version Save Button (+) */
+.version-save-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px dashed var(--border-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.version-save-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.version-save-btn:active {
+  transform: translateY(0);
+}
+
+.version-save-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Show style history container when it has the save button (always visible) */
+.style-history:has(.version-save-btn) {
+  display: flex;
 }
 
 /* ==========================================
@@ -1322,27 +1356,6 @@ canvas {
 
 .variations-section .section-header {
   cursor: default;
-}
-
-.add-variation-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  margin-left: auto;
-}
-
-.add-variation-btn:hover {
-  background: var(--surface-raised);
-  border-color: var(--border-light);
-  color: var(--text-secondary);
 }
 
 .variations-list {
@@ -1805,4 +1818,412 @@ textarea:focus-visible {
 ::selection {
   background: var(--accent);
   color: white;
+}
+
+/* ==========================================
+   ELEMENTS (Right Panel)
+   ==========================================
+
+   Design Philosophy:
+   - Elements are sections, not cards
+   - Follow same flat pattern as left panel
+   - Inputs are the focus, not containers
+   - Settings expand inline like section bodies
+   - Subordinate to canvas - functional, not decorative
+*/
+
+/* Element group - section-like, flat */
+.element-card {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.element-card:last-child {
+  border-bottom: none;
+}
+
+/* Element Header - matches section-header pattern */
+.element-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: default;
+}
+
+.element-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.element-hint {
+  font-size: 10px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Override indicator - blue dot when element has overrides */
+.override-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.override-indicator.active {
+  background: var(--accent);
+}
+
+/* Spacer pushes settings button to the right */
+.element-header-spacer {
+  flex: 1;
+}
+
+/* Settings toggle - subtle, right-aligned */
+.element-settings-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.element-settings-btn svg {
+  transition: transform var(--transition-base);
+}
+
+.element-settings-btn:hover {
+  color: var(--text-secondary);
+}
+
+.element-settings-btn.active {
+  color: var(--text-primary);
+}
+
+.element-settings-btn.active svg {
+  transform: rotate(180deg);
+}
+
+/* Element Content - input area */
+.element-content {
+  padding: 0 14px 12px;
+}
+
+.element-content .text-input {
+  background: var(--surface-inset);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-inset);
+}
+
+.element-content .text-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-inset), 0 0 0 2px var(--accent-muted);
+}
+
+.element-content .text-input + .text-input {
+  margin-top: 6px;
+}
+
+/* Element Settings - expandable, subtle inset treatment */
+.element-settings {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
+.element-settings:not(.collapsed) {
+  max-height: 400px;
+  padding: 12px 14px;
+  margin: 0 8px 8px;
+  background: var(--surface-inset);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-inset);
+}
+
+/* Settings Groups */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-group + .settings-group {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.settings-group-title {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Compact slider rows for settings */
+.element-settings .slider-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+}
+
+.element-settings .slider-row .prop-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  min-width: 0;
+}
+
+.element-settings .slider-row .slider-value {
+  font-size: 9px;
+  min-width: 0;
+  text-align: right;
+}
+
+/* ==========================================
+   CLEARABLE COLOR INPUT
+   ==========================================
+
+   Design Philosophy:
+   - Empty/cleared = inherit from global
+   - Click swatch to pick color
+   - Click X to clear back to inherit
+   - Visual "empty" state with diagonal line
+*/
+.color-input-clearable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.color-swatch-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.color-swatch-wrap input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: none;
+}
+
+.color-swatch-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-swatch-wrap input[type="color"]::-webkit-color-swatch {
+  border: 2px solid var(--bg-tertiary);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.color-swatch-wrap input[type="color"]:hover::-webkit-color-swatch {
+  border-color: var(--border-light);
+}
+
+/* Empty state - diagonal line through swatch */
+.color-swatch-wrap.empty::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 45%,
+      var(--text-muted) 45%,
+      var(--text-muted) 55%,
+      transparent 55%
+    );
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.color-swatch-wrap.empty input[type="color"]::-webkit-color-swatch {
+  background: var(--surface-inset) !important;
+}
+
+.color-input-clearable .color-hex {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', Monaco, monospace;
+  padding: 6px 8px;
+}
+
+.color-input-clearable .color-hex::placeholder {
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.color-clear-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  opacity: 0;
+}
+
+.color-input-clearable:hover .color-clear-btn,
+.color-input-clearable:focus-within .color-clear-btn {
+  opacity: 1;
+}
+
+.color-clear-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.color-clear-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Hide clear button when already empty */
+.color-swatch-wrap.empty + .color-hex + .color-clear-btn {
+  display: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==========================================
+   RIGHT PANEL REFINEMENTS
+   ========================================== */
+.panel.right .panel-content {
+  padding: 0;
+}
+
+/* Elements use their own structure, not sections */
+.panel.right .section {
+  border-bottom: none;
+}
+
+.panel.right .section-body {
+  padding: 8px 14px 14px;
+}
+
+/* Panel header for context */
+.panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-header-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.panel-header-hint {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  background: var(--surface-inset);
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+/* ==========================================
+   LEFT PANEL REFINEMENTS
+   ========================================== */
+
+/* AI-powered section hints - subtle accent treatment */
+.section-hint {
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+/* Style section with AI hint */
+.section:has(.style-prompt) .section-hint {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* AI panel header hints */
+.panel-header-hint.ai-hint {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* ==========================================
+   LAYERS CARD (Right Panel)
+   ==========================================
+
+   Design Philosophy:
+   - Simple opacity-only controls
+   - Opacity 0 = layer disabled
+   - No checkboxes or blend modes
+   - Compact horizontal layout
+*/
+.layers-card {
+  border-bottom: none;
+}
+
+.layers-card .element-header {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.layers-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.layer-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+}
+
+.layer-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Dim the layer label when opacity is 0 */
+.layer-row:has(input[type="range"][value="0"]) .layer-label {
+  color: var(--text-muted);
 }
