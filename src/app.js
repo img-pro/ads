@@ -5,6 +5,9 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+// AI-generated canvas decorations (rendered on canvas, exported with ad)
+let canvasDecorations = [];
+
 // ==========================================
 // DEFAULT SYSTEM PROMPT
 // ==========================================
@@ -617,12 +620,23 @@ function generateAd() {
     targetCtx.fillStyle = bgColor;
     targetCtx.fillRect(0, 0, width, height);
 
+    // Execute background drawing commands (behind text)
+    executeCanvasCommands(targetCtx, width, height, 'background', bgColor, textColor);
+
     const opticalOffset = height * opticalYOffset;
     let currentY = (height - contentHeight) / 2 - opticalOffset;
 
+    // Set text defaults before AI styling
     targetCtx.fillStyle = textColor;
     targetCtx.textAlign = 'center';
     targetCtx.textBaseline = 'top';
+
+    // Apply text styling commands (shadows, gradients, stroke settings)
+    // This can override fillStyle, set shadowColor/Blur, strokeStyle, etc.
+    executeCanvasCommands(targetCtx, width, height, 'text', bgColor, textColor);
+
+    // Check if stroke was set by AI (for text outlines)
+    const hasStroke = targetCtx.lineWidth > 0 && targetCtx.strokeStyle && targetCtx.strokeStyle !== '#000000';
 
     elements.forEach((el) => {
       currentY += el.marginTop;
@@ -638,16 +652,21 @@ function generateAd() {
           for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const charWidth = targetCtx.measureText(char).width;
+            if (hasStroke) targetCtx.strokeText(char, charX + charWidth / 2, currentY);
             targetCtx.fillText(char, charX + charWidth / 2, currentY);
             charX += charWidth + charSpacing;
           }
         }
       } else {
+        if (hasStroke) targetCtx.strokeText(el.text, width / 2, currentY);
         targetCtx.fillText(el.text, width / 2, currentY);
       }
 
       currentY += el.fontSize;
     });
+
+    // Execute foreground drawing commands (on top of text)
+    executeCanvasCommands(targetCtx, width, height, 'foreground', bgColor, textColor);
 
     targetCtx.restore();
   }
@@ -1679,6 +1698,268 @@ function loadDefaults() {
   document.getElementById('legendTransform').value = e.legend.transform;
   document.getElementById('legendMarginTop').value = e.legend.marginTop;
 }
+
+// ==========================================
+// AI CANVAS STYLING
+// ==========================================
+
+// Execute AI-generated canvas drawing commands
+function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textColor) {
+  const commands = canvasDecorations.filter(cmd => cmd.layer === layer);
+
+  commands.forEach(cmd => {
+    try {
+      // For 'text' layer, don't save/restore - we want the styles to persist for text rendering
+      if (layer !== 'text') {
+        targetCtx.save();
+      }
+
+      // Execute the drawing function with context, dimensions, and colors
+      if (typeof cmd.draw === 'function') {
+        const start = performance.now();
+        cmd.draw(targetCtx, width, height, bgColor, textColor);
+        const elapsed = performance.now() - start;
+        if (elapsed > 5) {
+          console.warn(`[Style] ${layer} layer took ${elapsed.toFixed(1)}ms`);
+        }
+      }
+
+      if (layer !== 'text') {
+        targetCtx.restore();
+      }
+    } catch (e) {
+      console.warn('Canvas command failed:', e);
+      if (layer !== 'text') {
+        targetCtx.restore();
+      }
+    }
+  });
+}
+
+// Parse AI-generated drawing code into executable functions
+function parseDrawingCode(code, layer) {
+  try {
+    // Create a function from the code string
+    // The function receives: ctx, w, h, bg, fg (foreground/text color)
+    const fn = new Function('ctx', 'w', 'h', 'bg', 'fg', code);
+    return { layer, draw: fn };
+  } catch (e) {
+    console.warn('Failed to parse drawing code:', e);
+    return null;
+  }
+}
+
+async function applyCanvasStyle() {
+  const apiKey = localStorage.getItem('anthropic_api_key');
+  if (!apiKey) {
+    openApiKeyModal();
+    return;
+  }
+
+  const prompt = document.getElementById('stylePrompt')?.value?.trim();
+  if (!prompt) {
+    alert('Please describe a visual style for the ad.');
+    return;
+  }
+
+  const btn = document.getElementById('styleBtn');
+  btn?.classList.add('loading');
+
+  console.time('[Style] Total');
+
+  // Gather current state for context
+  const currentState = {
+    bgColor: document.getElementById('bgColor')?.value,
+    textColor: document.getElementById('textColor')?.value,
+    fontFamily: document.getElementById('fontFamily')?.value,
+    fontScale: document.getElementById('fontScale')?.value,
+    letterSpacing: document.getElementById('letterSpacing')?.value
+  };
+
+  try {
+    console.time('[Style] API call');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: `You are a world-class advertising art director. Style this ad:
+
+"${prompt}"
+
+## AD STRUCTURE
+Performance ad with hierarchy: INTRO (qualifier) → HEADLINE (hero, 2 lines) → OFFER (CTA) → LEGEND (trust)
+
+## DESIGN REFERENCES
+- Nike: Electric energy, bold blocks, dramatic shadows
+- Spotify Wrapped: Explosive gradients, vibrant duotones, depth
+- Apple: Saturated colors, dramatic lighting
+- Figma: Playful gradients, glowing orbs, dimensional
+- Vercel: Dark luxury, purple/blue glows, premium depth
+
+## MAKE IT RICH
+- Layer gradients (radial + linear)
+- Glows and ambient light
+- Multiple shadow layers for depth
+- Bold color choices
+- Geometric accents
+- Vignettes for drama
+
+## TEXT TREATMENT
+Readable but dimensional:
+- Glows (shadowColor + shadowBlur)
+- Multi-layer shadows
+- Gradient fills possible
+
+## CURRENT STATE
+Background: ${currentState.bgColor} | Text: ${currentState.textColor} | Font: ${currentState.fontFamily}
+
+## OUTPUT FORMAT
+
+Return JSON:
+{
+  "design": {
+    "bgColor": "#hex",
+    "textColor": "#hex",
+    "fontFamily": "Inter|Montserrat|Space Grotesk|DM Sans|Poppins|Bebas Neue|Oswald|Anton|Barlow Condensed|Archivo Black|Roboto|Open Sans|Lato",
+    "fontScale": 0.5-1.5,
+    "letterSpacing": -0.05 to 0.15
+  },
+  "canvas": {
+    "background": "// JS Canvas 2D code - runs after bg fill, before text",
+    "text": "// sets ctx state before text draws (shadowColor, shadowBlur, fillStyle)",
+    "foreground": "// runs after text (vignettes, borders)"
+  }
+}
+
+Canvas code params: ctx, w, h, bg, fg
+Avoid loops. Use gradients/shadows.
+
+Return ONLY the JSON object.`
+        }]
+      })
+    });
+    console.timeEnd('[Style] API call');
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'API request failed');
+    }
+
+    console.time('[Style] Parse response');
+    const data = await response.json();
+    const content = data.content[0].text;
+
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No valid style JSON in response');
+    }
+
+    const styles = JSON.parse(jsonMatch[0]);
+
+    // Clear previous canvas commands
+    canvasDecorations = [];
+
+    // Apply design changes (actual ad controls)
+    if (styles.design) {
+      const d = styles.design;
+
+      if (d.bgColor && /^#[0-9A-Fa-f]{6}$/.test(d.bgColor)) {
+        document.getElementById('bgColor').value = d.bgColor.toUpperCase();
+        document.getElementById('bgColorPicker').value = d.bgColor;
+      }
+      if (d.textColor && /^#[0-9A-Fa-f]{6}$/.test(d.textColor)) {
+        document.getElementById('textColor').value = d.textColor.toUpperCase();
+        document.getElementById('textColorPicker').value = d.textColor;
+      }
+      if (d.fontFamily) {
+        const fontSelect = document.getElementById('fontFamily');
+        const option = Array.from(fontSelect.options).find(o => o.value === d.fontFamily);
+        if (option) {
+          fontSelect.value = d.fontFamily;
+          applyFontPreset(d.fontFamily);
+        }
+      }
+      if (typeof d.fontScale === 'number' && d.fontScale >= 0.5 && d.fontScale <= 1.5) {
+        document.getElementById('fontScale').value = d.fontScale;
+      }
+      if (typeof d.letterSpacing === 'number' && d.letterSpacing >= -0.05 && d.letterSpacing <= 0.15) {
+        document.getElementById('letterSpacing').value = d.letterSpacing;
+      }
+    }
+
+    // Parse and store canvas drawing commands
+    if (styles.canvas) {
+      if (styles.canvas.background) {
+        const bgCmd = parseDrawingCode(styles.canvas.background, 'background');
+        if (bgCmd) canvasDecorations.push(bgCmd);
+      }
+      if (styles.canvas.text) {
+        const textCmd = parseDrawingCode(styles.canvas.text, 'text');
+        if (textCmd) canvasDecorations.push(textCmd);
+      }
+      if (styles.canvas.foreground) {
+        const fgCmd = parseDrawingCode(styles.canvas.foreground, 'foreground');
+        if (fgCmd) canvasDecorations.push(fgCmd);
+      }
+    }
+    console.timeEnd('[Style] Parse response');
+
+    // Re-render the ad with new settings and canvas commands
+    console.time('[Style] Render');
+    generateAd();
+    console.timeEnd('[Style] Render');
+    console.timeEnd('[Style] Total');
+
+  } catch (error) {
+    console.error('AI Style error:', error);
+    alert('Error applying style: ' + error.message);
+    console.timeEnd('[Style] Total');
+  } finally {
+    btn?.classList.remove('loading');
+  }
+}
+
+function clearCanvasStyle() {
+  // Clear canvas drawing commands and re-render
+  canvasDecorations = [];
+  generateAd();
+
+  // Clear prompt
+  const promptEl = document.getElementById('stylePrompt');
+  if (promptEl) promptEl.value = '';
+}
+
+function resetBuilder() {
+  // Clear localStorage for builder state
+  localStorage.removeItem('adStudioState');
+
+  // Clear canvas commands
+  canvasDecorations = [];
+
+  // Clear style prompt
+  const promptEl = document.getElementById('stylePrompt');
+  if (promptEl) promptEl.value = '';
+
+  // Reset to defaults
+  loadDefaults();
+
+  // Re-render
+  generateAd();
+}
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
 
 // Initialize
 const hasStoredState = loadAppState();
