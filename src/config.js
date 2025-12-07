@@ -88,14 +88,13 @@ const EFFECT_LIBRARY = {
     },
     'noise-light': (ctx, w, h, bg, fg) => {
       // Subtle noise texture for organic feel
-      ctx.globalAlpha = 0.03;
+      ctx.globalAlpha *= 0.03;
       for (let i = 0; i < 5000; i++) {
         const x = Math.random() * w;
         const y = Math.random() * h;
         ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
         ctx.fillRect(x, y, 1, 1);
       }
-      ctx.globalAlpha = 1;
     }
   },
 
@@ -166,32 +165,29 @@ const EFFECT_LIBRARY = {
     'border-thin': (ctx, w, h, bg, fg) => {
       const inset = Math.min(w, h) * 0.04;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha *= 0.3;
       ctx.lineWidth = 1;
       ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
-      ctx.globalAlpha = 1;
     },
     'border-medium': (ctx, w, h, bg, fg) => {
       const inset = Math.min(w, h) * 0.05;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha *= 0.4;
       ctx.lineWidth = 2;
       ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
-      ctx.globalAlpha = 1;
     },
     'border-bold': (ctx, w, h, bg, fg) => {
       const inset = Math.min(w, h) * 0.05;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha *= 0.5;
       ctx.lineWidth = 3;
       ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
-      ctx.globalAlpha = 1;
     },
     'corners': (ctx, w, h, bg, fg) => {
       const inset = Math.min(w, h) * 0.05;
       const len = Math.min(w, h) * 0.08;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha *= 0.5;
       ctx.lineWidth = 2;
       ctx.beginPath();
       // Top-left
@@ -203,13 +199,12 @@ const EFFECT_LIBRARY = {
       // Bottom-left
       ctx.moveTo(inset + len, h - inset); ctx.lineTo(inset, h - inset); ctx.lineTo(inset, h - inset - len);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     },
     'corners-bold': (ctx, w, h, bg, fg) => {
       const inset = Math.min(w, h) * 0.06;
       const len = Math.min(w, h) * 0.1;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha *= 0.6;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(inset, inset + len); ctx.lineTo(inset, inset); ctx.lineTo(inset + len, inset);
@@ -217,18 +212,16 @@ const EFFECT_LIBRARY = {
       ctx.moveTo(w - inset, h - inset - len); ctx.lineTo(w - inset, h - inset); ctx.lineTo(w - inset - len, h - inset);
       ctx.moveTo(inset + len, h - inset); ctx.lineTo(inset, h - inset); ctx.lineTo(inset, h - inset - len);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     },
     'line-bottom': (ctx, w, h, bg, fg) => {
       const inset = w * 0.1;
       ctx.strokeStyle = fg;
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha *= 0.4;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(inset, h * 0.88);
       ctx.lineTo(w - inset, h * 0.88);
       ctx.stroke();
-      ctx.globalAlpha = 1;
     },
     'gradient-fade-bottom': (ctx, w, h, bg, fg) => {
       const gradient = ctx.createLinearGradient(0, h * 0.7, 0, h);
