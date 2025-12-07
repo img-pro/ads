@@ -1699,7 +1699,7 @@ function renderStyleHistory() {
   const html = styleHistory.map((style, index) => `
     <div class="style-thumb${index === activeStyleIndex ? ' active' : ''}"
          onclick="applyStyleFromHistory(${index})"
-         title="${style.prompt || 'Untitled style'}">
+         title="${escapeHtml(style.prompt || 'Untitled style')}">
       <img src="${style.thumbnail}" alt="Style ${index + 1}">
       <button class="style-thumb-delete" onclick="deleteStyleFromHistory(${index}, event)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1749,6 +1749,33 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
 // Parse AI-generated drawing code into executable functions
 function parseDrawingCode(code, layer) {
   try {
+    // Validate code doesn't contain dangerous patterns
+    // This is defense-in-depth for code stored in localStorage
+    const dangerousPatterns = [
+      /\beval\b/,
+      /\bFunction\b/,
+      /\bfetch\b/,
+      /\bXMLHttpRequest\b/,
+      /\blocalStorage\b/,
+      /\bsessionStorage\b/,
+      /\bdocument\b/,
+      /\bwindow\b/,
+      /\bglobalThis\b/,
+      /\bimport\b/,
+      /\brequire\b/,
+      /\bpostMessage\b/,
+      /\bconstructor\b/,
+      /\b__proto__\b/,
+      /\bprototype\b/
+    ];
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(code)) {
+        console.warn('Rejected canvas code containing dangerous pattern:', pattern);
+        return null;
+      }
+    }
+
     // Create a function from the code string
     // The function receives: ctx, w, h, bg, fg (foreground/text color)
     const fn = new Function('ctx', 'w', 'h', 'bg', 'fg', code);
