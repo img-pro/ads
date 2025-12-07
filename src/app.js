@@ -1783,88 +1783,77 @@ async function applyCanvasStyle() {
         max_tokens: 4096,
         messages: [{
           role: 'user',
-          content: `You are a world-class advertising art director known for bold, striking, visually rich designs. Style this ad:
+          content: `You are a world-class advertising art director. Style this ad based on the request:
 
 "${prompt}"
 
-## THE AD FORMAT
-Performance marketing ad with typographic hierarchy:
-- INTRO: Small qualifier (audience identifier)
-- HEADLINE: Hero text, largest, emotional hook (2 lines)
-- OFFER: Call-to-action
-- LEGEND: Trust signal
+## THE AD
+This is a performance marketing ad with a clear typographic hierarchy:
+- INTRO: Small qualifier text (identifies the audience)
+- HEADLINE: The hero text, largest element, emotional hook (usually 2 lines)
+- OFFER: Clear call-to-action
+- LEGEND: Small trust signal or friction remover
 
-## DESIGN PHILOSOPHY
-Create visually RICH, TEXTURED, COMPELLING designs. Think:
+The text is ALWAYS the hero. Every design decision must serve readability and impact.
 
-**Nike**: Electric energy, bold color blocks, dramatic shadows, kinetic feel
-**Spotify Wrapped**: Explosive gradients, vibrant duotones, layered depth
-**Apple**: When they go bold - saturated colors, dramatic lighting, depth
-**Figma**: Playful gradients, glowing orbs, mesh gradients, dimensional
-**Vercel**: Dark luxury, purple/blue glows, subtle grain, premium depth
-**Bauhaus posters**: Geometric shapes, bold color blocking, dynamic composition
+## DESIGN PRINCIPLES
+Study these references:
+- Apple: Pristine simplicity, massive typography, restrained color, perfect contrast
+- Nike: Bold, kinetic, high contrast, typography as graphic element
+- Spotify: Vibrant duotones, energetic gradients, modern and fresh
+- Stripe: Sophisticated gradients, subtle depth, premium feel
+- Linear: Dark mode excellence, subtle glows, refined minimalism
 
-## MAKE IT RICH
-- Layer multiple gradients (radial + linear)
-- Add subtle noise/grain for texture
-- Use glows and ambient light effects
-- Create depth with multiple shadow layers
-- Bold, confident color choices
-- Geometric accents and shapes
-- Vignettes for focus and drama
-- Don't be afraid of saturation
-
-## TEXT TREATMENT
-Text must be readable BUT also visually exciting:
-- Glows that make text luminous
-- Multi-layer shadows for depth (soft glow + hard shadow)
-- Gradient fills on text
-- Subtle outlines for definition
-- The text should feel dimensional, not flat
+Key principles:
+- Contrast is king. Text must pop immediately.
+- Restraint over decoration. Every element must earn its place.
+- Typography IS the design. Don't compete with it.
+- Shadows add depth, not noise. Subtle and purposeful.
+- Color harmony matters. 2-3 colors maximum.
+- White space is active design, not emptiness.
 
 ## CURRENT STATE
 - Background: ${currentState.bgColor}
 - Text: ${currentState.textColor}
 - Font: ${currentState.fontFamily}
 
-## CONTROLS
+## YOUR CONTROLS
 
-1. DESIGN:
-   - bgColor, textColor: hex colors
+1. DESIGN (UI controls):
+   - bgColor: hex color
+   - textColor: hex color
    - fontFamily: [Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Bebas Neue, Oswald, Anton, Barlow Condensed, Archivo Black, Roboto, Open Sans, Lato, Helvetica]
    - fontScale: 0.5-1.5
    - letterSpacing: -0.05 to 0.15
 
-2. CANVAS (JS Canvas 2D API):
-   Params: ctx, w, h, bg, fg
+2. CANVAS (JS code for Canvas 2D API):
+   Parameters: ctx, w, h, bg, fg
 
-   Layers:
-   - "background": Rich gradients, shapes, patterns, grain, atmosphere
-   - "text": Shadows, glows, gradient fills - make text dimensional
-   - "foreground": Vignettes, borders, overlays, finishing effects
+   Three layers:
+   - "background": After fill, before text. Gradients, subtle patterns, atmosphere.
+   - "text": Context state for text rendering. Shadows for depth, subtle effects.
+   - "foreground": After text. Borders, vignettes, finishing touches.
 
-## TECHNIQUES
-
-Noise/grain:
-\`for(let i=0;i<w*h*0.03;i++){ctx.fillStyle='rgba(255,255,255,'+(Math.random()*0.03)+')';ctx.fillRect(Math.random()*w,Math.random()*h,1,1);}\`
-
-Multi-layer glow:
-\`ctx.shadowColor='#8b5cf6';ctx.shadowBlur=40;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;\` (applied twice draws double glow)
-
-Radial vignette:
-\`const v=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.8);v.addColorStop(0,'transparent');v.addColorStop(1,'rgba(0,0,0,0.4)');ctx.fillStyle=v;ctx.fillRect(0,0,w,h);\`
+## CRITICAL RULES
+- NEVER reduce text legibility
+- Shadows should lift text, not muddy it
+- If using text shadows: subtle blur (8-20px), low opacity (0.2-0.4)
+- Hard drop shadows: small offset (2-4px), dark but not black
+- Background effects stay in background - never compete with text
+- Borders and frames: thin, subtle, purposeful
+- When in doubt, do less
 
 Return JSON:
 {
   "design": { ... },
   "canvas": {
-    "background": "// rich, layered code",
-    "text": "// dimensional text effects",
-    "foreground": "// finishing touches"
+    "background": "// code",
+    "text": "// code",
+    "foreground": "// code"
   }
 }
 
-Be bold. Be rich. Be striking. Return ONLY the JSON.`
+Return ONLY the JSON object.`
         }]
       })
     });
