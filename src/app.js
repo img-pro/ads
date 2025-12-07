@@ -1725,7 +1725,7 @@ function renderStyleHistory() {
     <div class="style-thumb${index === activeStyleIndex ? ' active' : ''}"
          onclick="applyStyleFromHistory(${index})"
          title="${escapeHtml(style.prompt || 'Untitled style')}">
-      <img src="${style.thumbnail}" alt="Style ${index + 1}">
+      <img src="${escapeHtml(style.thumbnail || '')}" alt="Style ${index + 1}">
       <button class="style-thumb-delete" onclick="deleteStyleFromHistory(${index}, event)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
