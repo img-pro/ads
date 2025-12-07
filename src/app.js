@@ -1716,12 +1716,7 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
 
       // Execute the drawing function with context, dimensions, and colors
       if (typeof cmd.draw === 'function') {
-        const start = performance.now();
         cmd.draw(targetCtx, width, height, bgColor, textColor);
-        const elapsed = performance.now() - start;
-        if (elapsed > 5) {
-          console.warn(`[Style] ${layer} layer took ${elapsed.toFixed(1)}ms`);
-        }
       }
 
       if (layer !== 'text') {
@@ -1765,8 +1760,6 @@ async function applyCanvasStyle() {
   const btn = document.getElementById('styleBtn');
   btn?.classList.add('loading');
 
-  console.time('[Style] Total');
-
   // Gather current state for context
   const currentState = {
     bgColor: document.getElementById('bgColor')?.value,
@@ -1777,7 +1770,6 @@ async function applyCanvasStyle() {
   };
 
   try {
-    console.time('[Style] API call');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1795,66 +1787,93 @@ async function applyCanvasStyle() {
 
 "${prompt}"
 
-## AD STRUCTURE
-Performance ad with hierarchy: INTRO (qualifier) → HEADLINE (hero, 2 lines) → OFFER (CTA) → LEGEND (trust)
+## THE AD FORMAT
+Performance marketing ad with typographic hierarchy:
+- INTRO: Small qualifier (audience identifier)
+- HEADLINE: Hero text, largest, emotional hook (2 lines)
+- OFFER: Call-to-action
+- LEGEND: Trust signal
 
-## DESIGN REFERENCES
-- Nike: Electric energy, bold blocks, dramatic shadows
-- Spotify Wrapped: Explosive gradients, vibrant duotones, depth
-- Apple: Saturated colors, dramatic lighting
-- Figma: Playful gradients, glowing orbs, dimensional
-- Vercel: Dark luxury, purple/blue glows, premium depth
+## DESIGN PHILOSOPHY
+Create visually RICH, TEXTURED, COMPELLING designs. Think:
+
+**Nike**: Electric energy, bold color blocks, dramatic shadows, kinetic feel
+**Spotify Wrapped**: Explosive gradients, vibrant duotones, layered depth
+**Apple**: When they go bold - saturated colors, dramatic lighting, depth
+**Figma**: Playful gradients, glowing orbs, mesh gradients, dimensional
+**Vercel**: Dark luxury, purple/blue glows, subtle grain, premium depth
+**Bauhaus posters**: Geometric shapes, bold color blocking, dynamic composition
 
 ## MAKE IT RICH
-- Layer gradients (radial + linear)
-- Glows and ambient light
-- Multiple shadow layers for depth
-- Bold color choices
-- Geometric accents
-- Vignettes for drama
+- Layer multiple gradients (radial + linear)
+- Add subtle noise/grain for texture
+- Use glows and ambient light effects
+- Create depth with multiple shadow layers
+- Bold, confident color choices
+- Geometric accents and shapes
+- Vignettes for focus and drama
+- Don't be afraid of saturation
 
 ## TEXT TREATMENT
-Readable but dimensional:
-- Glows (shadowColor + shadowBlur)
-- Multi-layer shadows
-- Gradient fills possible
+Text must be readable BUT also visually exciting:
+- Glows that make text luminous
+- Multi-layer shadows for depth (soft glow + hard shadow)
+- Gradient fills on text
+- Subtle outlines for definition
+- The text should feel dimensional, not flat
 
 ## CURRENT STATE
-Background: ${currentState.bgColor} | Text: ${currentState.textColor} | Font: ${currentState.fontFamily}
+- Background: ${currentState.bgColor}
+- Text: ${currentState.textColor}
+- Font: ${currentState.fontFamily}
 
-## OUTPUT FORMAT
+## CONTROLS
+
+1. DESIGN:
+   - bgColor, textColor: hex colors
+   - fontFamily: [Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Bebas Neue, Oswald, Anton, Barlow Condensed, Archivo Black, Roboto, Open Sans, Lato, Helvetica]
+   - fontScale: 0.5-1.5
+   - letterSpacing: -0.05 to 0.15
+
+2. CANVAS (JS Canvas 2D API):
+   Params: ctx, w, h, bg, fg
+
+   Layers:
+   - "background": Rich gradients, shapes, patterns, grain, atmosphere
+   - "text": Shadows, glows, gradient fills - make text dimensional
+   - "foreground": Vignettes, borders, overlays, finishing effects
+
+## TECHNIQUES
+
+Noise/grain:
+\`for(let i=0;i<w*h*0.03;i++){ctx.fillStyle='rgba(255,255,255,'+(Math.random()*0.03)+')';ctx.fillRect(Math.random()*w,Math.random()*h,1,1);}\`
+
+Multi-layer glow:
+\`ctx.shadowColor='#8b5cf6';ctx.shadowBlur=40;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;\` (applied twice draws double glow)
+
+Radial vignette:
+\`const v=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w*0.8);v.addColorStop(0,'transparent');v.addColorStop(1,'rgba(0,0,0,0.4)');ctx.fillStyle=v;ctx.fillRect(0,0,w,h);\`
 
 Return JSON:
 {
-  "design": {
-    "bgColor": "#hex",
-    "textColor": "#hex",
-    "fontFamily": "Inter|Montserrat|Space Grotesk|DM Sans|Poppins|Bebas Neue|Oswald|Anton|Barlow Condensed|Archivo Black|Roboto|Open Sans|Lato",
-    "fontScale": 0.5-1.5,
-    "letterSpacing": -0.05 to 0.15
-  },
+  "design": { ... },
   "canvas": {
-    "background": "// JS Canvas 2D code - runs after bg fill, before text",
-    "text": "// sets ctx state before text draws (shadowColor, shadowBlur, fillStyle)",
-    "foreground": "// runs after text (vignettes, borders)"
+    "background": "// rich, layered code",
+    "text": "// dimensional text effects",
+    "foreground": "// finishing touches"
   }
 }
 
-Canvas code params: ctx, w, h, bg, fg
-Avoid loops. Use gradients/shadows.
-
-Return ONLY the JSON object.`
+Be bold. Be rich. Be striking. Return ONLY the JSON.`
         }]
       })
     });
-    console.timeEnd('[Style] API call');
 
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error?.message || 'API request failed');
     }
 
-    console.time('[Style] Parse response');
     const data = await response.json();
     const content = data.content[0].text;
 
@@ -1912,18 +1931,13 @@ Return ONLY the JSON object.`
         if (fgCmd) canvasDecorations.push(fgCmd);
       }
     }
-    console.timeEnd('[Style] Parse response');
 
     // Re-render the ad with new settings and canvas commands
-    console.time('[Style] Render');
     generateAd();
-    console.timeEnd('[Style] Render');
-    console.timeEnd('[Style] Total');
 
   } catch (error) {
     console.error('AI Style error:', error);
     alert('Error applying style: ' + error.message);
-    console.timeEnd('[Style] Total');
   } finally {
     btn?.classList.remove('loading');
   }
