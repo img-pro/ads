@@ -1783,7 +1783,7 @@ async function applyCanvasStyle() {
         max_tokens: 4096,
         messages: [{
           role: 'user',
-          content: `You are a world-class advertising art director. Style this ad:
+          content: `You are a world-class advertising art director known for bold, striking, visually rich designs. Style this ad:
 
 "${prompt}"
 
