@@ -10,9 +10,9 @@ let canvasDecorations = [];
 
 // Get layer overrides from UI (opacity > 0 = enabled)
 function getLayerOverrides() {
-  const bgOpacity = parseFloat(document.getElementById('bgLayerOpacity')?.value) ?? 1;
-  const textOpacity = parseFloat(document.getElementById('textLayerOpacity')?.value) ?? 1;
-  const fgOpacity = parseFloat(document.getElementById('fgLayerOpacity')?.value) ?? 1;
+  const bgOpacity = parseFloat(document.getElementById('bgLayerOpacity')?.value) || 1;
+  const textOpacity = parseFloat(document.getElementById('textLayerOpacity')?.value) || 1;
+  const fgOpacity = parseFloat(document.getElementById('fgLayerOpacity')?.value) || 1;
 
   return {
     background: {
@@ -1983,11 +1983,11 @@ function getCurrentVersion() {
       marginTop: getNum('legendMarginTop')
     },
 
-    // Layer opacities
+    // Layer opacities (0 = disabled, which is a valid user choice)
     layers: {
-      background: getNum('bgLayerOpacity') || 1,
-      text: getNum('textLayerOpacity') || 1,
-      foreground: getNum('fgLayerOpacity') || 1
+      background: getNum('bgLayerOpacity'),
+      text: getNum('textLayerOpacity'),
+      foreground: getNum('fgLayerOpacity')
     },
 
     // AI Canvas commands (stored as code strings for re-parsing)
@@ -2003,7 +2003,7 @@ function getCurrentVersion() {
 }
 
 // Apply a saved version to the UI
-function applyVersion(index) {
+async function applyVersion(index) {
   const version = savedVersions[index];
   if (!version) return;
 
@@ -2126,7 +2126,8 @@ function applyVersion(index) {
   // Update canvas info
   updateCanvasInfo();
 
-  generateAd();
+  // Await generateAd to ensure fonts are loaded before rendering preview
+  await generateAd();
   renderPreview();
   renderVersions();
 }
