@@ -9,10 +9,16 @@ const ctx = canvas.getContext('2d');
 let canvasDecorations = [];
 
 // Get layer overrides from UI (opacity > 0 = enabled)
+// Uses helper to handle NaN (missing element) vs 0 (intentionally disabled)
 function getLayerOverrides() {
-  const bgOpacity = parseFloat(document.getElementById('bgLayerOpacity')?.value) || 1;
-  const textOpacity = parseFloat(document.getElementById('textLayerOpacity')?.value) || 1;
-  const fgOpacity = parseFloat(document.getElementById('fgLayerOpacity')?.value) || 1;
+  const parseOpacity = (id) => {
+    const val = parseFloat(document.getElementById(id)?.value);
+    return isNaN(val) ? 1 : val;
+  };
+
+  const bgOpacity = parseOpacity('bgLayerOpacity');
+  const textOpacity = parseOpacity('textLayerOpacity');
+  const fgOpacity = parseOpacity('fgLayerOpacity');
 
   return {
     background: {
@@ -771,14 +777,16 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
   targetCtx.textAlign = 'center';
   targetCtx.textBaseline = 'top';
 
-  // Reset lineWidth before text commands so we can detect if AI sets it
+  // Reset stroke state before text commands - AI must explicitly set both
+  // lineWidth AND strokeStyle to get a visible stroke (prevents accidental black borders)
   targetCtx.lineWidth = 0;
+  targetCtx.strokeStyle = 'transparent';
 
   // Text styling commands (with layer overrides)
   executeCanvasCommands(targetCtx, width, height, 'text', bgColor, textColor, layerOvr);
 
-  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
-  const hasStroke = targetCtx.lineWidth > 0;
+  // AI must set lineWidth > 0 and a visible strokeStyle to enable stroke
+  const hasStroke = targetCtx.lineWidth > 0 && targetCtx.strokeStyle !== 'transparent';
 
   // Draw text elements with per-element typography
   elements.forEach((el) => {
@@ -846,9 +854,10 @@ function getTemplateFromUI() {
   const globalTransform = document.getElementById('textTransform')?.value || 'none';
 
   // Helper to get element transform (empty = inherit from global)
-  const getTransform = (elementId, defaultVal) => {
+  const getTransform = (elementId) => {
     const val = document.getElementById(`${elementId}Transform`)?.value;
-    return val === '' ? globalTransform : (val || defaultVal);
+    // Empty string means "Inherit" - use global transform
+    return val === '' ? globalTransform : val;
   };
 
   return {
@@ -862,7 +871,7 @@ function getTemplateFromUI() {
     intro: {
       size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
       weight: document.getElementById('introWeight')?.value || '500',
-      transform: getTransform('intro', 'none'),
+      transform: getTransform('intro'),
       marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0,
       fontFamily: getElementFont('intro'),
       letterSpacing: getElementSpacing('intro'),
@@ -871,7 +880,7 @@ function getTemplateFromUI() {
     headline: {
       size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
       weight: document.getElementById('headlineWeight')?.value || '700',
-      transform: getTransform('headline', 'uppercase'),
+      transform: getTransform('headline'),
       marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
       lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05,
       fontFamily: getElementFont('headline'),
@@ -881,7 +890,7 @@ function getTemplateFromUI() {
     offer: {
       size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
       weight: document.getElementById('offerWeight')?.value || '800',
-      transform: getTransform('offer', 'uppercase'),
+      transform: getTransform('offer'),
       marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15,
       fontFamily: getElementFont('offer'),
       letterSpacing: getElementSpacing('offer'),
@@ -890,7 +899,7 @@ function getTemplateFromUI() {
     legend: {
       size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
       weight: document.getElementById('legendWeight')?.value || '400',
-      transform: getTransform('legend', 'none'),
+      transform: getTransform('legend'),
       marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06,
       fontFamily: getElementFont('legend'),
       letterSpacing: getElementSpacing('legend'),
@@ -1061,10 +1070,35 @@ async function ensureFontLoaded(fontFamily) {
 // BUILDER EVENT LISTENERS
 // ==========================================
 
+// Reset element overrides to "Inherit" when a global setting changes
+function resetElementOverridesToInherit(globalId) {
+  const elements = ['intro', 'headline', 'offer', 'legend'];
+
+  if (globalId === 'fontFamily') {
+    // Reset all element font overrides to inherit
+    elements.forEach(el => {
+      const select = document.getElementById(`${el}Font`);
+      if (select) select.value = '';
+    });
+    updateElementOverrideIndicators();
+  } else if (globalId === 'textTransform') {
+    // Reset all element transform overrides to inherit
+    elements.forEach(el => {
+      const select = document.getElementById(`${el}Transform`);
+      if (select) select.value = '';
+    });
+  }
+}
+
 // Throttle render calls for smooth slider dragging (especially on Safari)
 let builderRafPending = false;
 document.querySelectorAll('#builder-tab input, #builder-tab select').forEach(input => {
   input.addEventListener('input', (e) => {
+    // When global typography settings change, reset element overrides to inherit
+    if (e.target.id === 'fontFamily' || e.target.id === 'textTransform') {
+      resetElementOverridesToInherit(e.target.id);
+    }
+
     // When font changes, apply preset if one exists
     if (e.target.id === 'fontFamily') {
       applyFontPreset(e.target.value);
@@ -2184,8 +2218,10 @@ async function generateStyleThumbnail() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Reset lineWidth before text commands so we can detect if AI sets it
+  // Reset stroke state before text commands - AI must explicitly set both
+  // lineWidth AND strokeStyle to get a visible stroke (prevents accidental black borders)
   ctx.lineWidth = 0;
+  ctx.strokeStyle = 'transparent';
 
   // 4. Execute text layer commands (shadows, strokes, fills)
   executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'text', bgColor, textColor, defaultOverrides);
@@ -2195,8 +2231,8 @@ async function generateStyleThumbnail() {
   const fontWeight = template.headline.weight || '700';
   ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
 
-  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
-  const hasStroke = ctx.lineWidth > 0;
+  // AI must set lineWidth > 0 and a visible strokeStyle to enable stroke
+  const hasStroke = ctx.lineWidth > 0 && ctx.strokeStyle !== 'transparent';
 
   // Draw with letter spacing if set
   const text = 'Aa';
