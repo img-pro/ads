@@ -250,6 +250,32 @@ body {
   flex-direction: column;
 }
 
+/* Flex variant for left panel - style section grows to fill space */
+.panel-content-flex {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.section-body-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.style-prompt-flex {
+  flex: 1;
+  min-height: 120px;
+  resize: none;
+}
+
 .panel-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -1936,13 +1962,20 @@ textarea:focus-visible {
 
 /* Element Settings - expandable, subtle inset treatment */
 .element-settings {
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+
+.element-settings-inner {
   overflow: hidden;
-  transition: max-height 0.2s ease-out;
 }
 
 .element-settings:not(.collapsed) {
-  max-height: 400px;
+  grid-template-rows: 1fr;
+}
+
+.element-settings:not(.collapsed) .element-settings-inner {
   padding: 12px 14px;
   margin: 0 8px 8px;
   background: var(--surface-inset);
@@ -2178,6 +2211,19 @@ textarea:focus-visible {
 .section:has(.style-prompt) .section-hint {
   background: var(--accent-subtle);
   color: var(--accent);
+}
+
+/* Layers card AI hint - same treatment as section-hint */
+.layers-card .element-hint {
+  font-size: 9px;
+  font-weight: 500;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 /* AI panel header hints */

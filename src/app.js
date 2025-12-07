@@ -187,6 +187,17 @@ function toggleSection(header) {
 function toggleElementSettings(btn) {
   const card = btn.closest('.element-card');
   const settings = card.querySelector('.element-settings');
+  const isOpening = settings.classList.contains('collapsed');
+
+  // Collapse all other element settings first (accordion behavior)
+  document.querySelectorAll('.element-card .element-settings').forEach(s => {
+    if (s !== settings) {
+      s.classList.add('collapsed');
+      s.closest('.element-card').querySelector('.element-settings-btn')?.classList.remove('active');
+    }
+  });
+
+  // Toggle the clicked one
   settings.classList.toggle('collapsed');
   btn.classList.toggle('active');
 }
@@ -318,15 +329,15 @@ function setupLayerControls() {
   });
 }
 
-// Reset layer opacities to 100% and update UI
+// Reset layer opacities to 50% (default for AI effects) and update UI
 function resetLayerOpacities() {
   ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
     const el = document.getElementById(id);
     const valEl = document.getElementById(`${id}Val`);
     if (el) {
-      el.value = 1;
-      if (valEl) valEl.textContent = '100%';
-      // Remove disabled class since opacity is now 100%
+      el.value = 0.5;
+      if (valEl) valEl.textContent = '50%';
+      // Remove disabled class since opacity is now 50%
       const layerRow = el.closest('.layer-row');
       if (layerRow) layerRow.classList.remove('layer-disabled');
     }
@@ -1253,45 +1264,8 @@ function loadAppState() {
         }
       });
 
-      // Update all slider value displays
-      // Global sliders
-      ['fontScale', 'letterSpacing', 'opticalYOffset'].forEach(id => {
-        const el = document.getElementById(id);
-        const valEl = document.getElementById(`${id}Val`);
-        if (el && valEl) {
-          const val = parseFloat(el.value);
-          if (id === 'fontScale') {
-            valEl.textContent = val.toFixed(2);
-          } else if (id === 'letterSpacing') {
-            valEl.textContent = (val >= 0 ? '+' : '') + (val * 100).toFixed(0) + '%';
-          } else if (id === 'opticalYOffset') {
-            valEl.textContent = Math.round(val * 100) + '%';
-          }
-        }
-      });
-
-      // Per-element sliders
-      ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
-        // Size
-        const sizeEl = document.getElementById(`${elId}Size`);
-        const sizeValEl = document.getElementById(`${elId}SizeVal`);
-        if (sizeEl && sizeValEl) {
-          sizeValEl.textContent = Math.round(parseFloat(sizeEl.value) * 100) + '%';
-        }
-        // Margin top
-        const marginEl = document.getElementById(`${elId}MarginTop`);
-        const marginValEl = document.getElementById(`${elId}MarginTopVal`);
-        if (marginEl && marginValEl) {
-          marginValEl.textContent = Math.round(parseFloat(marginEl.value) * 100) + '%';
-        }
-      });
-
-      // Headline line height
-      const lineHeightEl = document.getElementById('headlineLineHeight');
-      const lineHeightValEl = document.getElementById('headlineLineHeightVal');
-      if (lineHeightEl && lineHeightValEl) {
-        lineHeightValEl.textContent = parseFloat(lineHeightEl.value).toFixed(2);
-      }
+      // Update all slider value displays using the canonical function
+      updateDisplays();
 
       // Restore per-element colors and update swatch states
       // Supports both hex and rgba formats
@@ -2087,17 +2061,16 @@ async function applyVersion(index) {
     setVal('introFont', version.intro.font);
     setVal('introWeight', version.intro.weight);
     setVal('introTransform', version.intro.transform);
-    setVal('introColor', version.intro.color);
+    setColor('introColorPicker', 'introColor', version.intro.color);
     setVal('introSize', version.intro.size);
     setVal('introMarginTop', version.intro.marginTop);
-    // Update color swatch state
     updateColorSwatchState('intro');
   }
   if (version.headline) {
     setVal('headlineFont', version.headline.font);
     setVal('headlineWeight', version.headline.weight);
     setVal('headlineTransform', version.headline.transform);
-    setVal('headlineColor', version.headline.color);
+    setColor('headlineColorPicker', 'headlineColor', version.headline.color);
     setVal('headlineSize', version.headline.size);
     setVal('headlineLineHeight', version.headline.lineHeight);
     setVal('headlineMarginTop', version.headline.marginTop);
@@ -2107,7 +2080,7 @@ async function applyVersion(index) {
     setVal('offerFont', version.offer.font);
     setVal('offerWeight', version.offer.weight);
     setVal('offerTransform', version.offer.transform);
-    setVal('offerColor', version.offer.color);
+    setColor('offerColorPicker', 'offerColor', version.offer.color);
     setVal('offerSize', version.offer.size);
     setVal('offerMarginTop', version.offer.marginTop);
     updateColorSwatchState('offer');
@@ -2116,7 +2089,7 @@ async function applyVersion(index) {
     setVal('legendFont', version.legend.font);
     setVal('legendWeight', version.legend.weight);
     setVal('legendTransform', version.legend.transform);
-    setVal('legendColor', version.legend.color);
+    setColor('legendColorPicker', 'legendColor', version.legend.color);
     setVal('legendSize', version.legend.size);
     setVal('legendMarginTop', version.legend.marginTop);
     updateColorSwatchState('legend');
@@ -2563,24 +2536,33 @@ async function applyCanvasStyle() {
    Foreground effects: ${fgEffects}
 
 ## EFFECT GUIDANCE
-- Dark backgrounds: "shadow-soft", "shadow-medium", or "lift" work well
+Background effects:
+- Dark backgrounds: "gradient-subtle", "gradient-radial", or "vignette-light"
+- Light backgrounds: "gradient-diagonal" or "duotone-cool"
+- Minimalist: "none"
+
+Text effects:
+- Dark backgrounds: "shadow-soft", "shadow-medium", or "lift"
 - Light backgrounds: "shadow-hard" adds punch
-- Minimalist: Use "none" for all — confident simplicity
-- Premium/luxury: "gradient-radial" + "glow-soft" + "vignette-light"
-- Bold/impactful: "gradient-diagonal" + "shadow-dramatic"
-- Clean/modern: "none" or "gradient-subtle" + "shadow-soft"
+- Glowing/neon: "glow-soft" or "glow-medium"
+
+Foreground effects (framing and polish):
+- Premium/luxury: "corners" or "border-thin" — adds refinement
+- Editorial/news: "line-bottom" — grounds the composition
+- Bold/contained: "border-medium" or "border-bold" — strong framing
+- Cinematic: "gradient-fade-bottom" — dramatic depth
 
 ## CRITICAL RULES
 - ALWAYS ensure high contrast between bgColor and textColor
-- Typography IS the design — effects are optional enhancement
-- "none" is often the best choice for text and foreground effects
+- Typography IS the design — effects enhance, never dominate
+- Consider using foreground effects to add polish and framing
 - Pick at most ONE effect per layer
 
 Return ONLY valid JSON:
 {
   "colors": { "bgColor": "#...", "textColor": "#..." },
   "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
-  "effects": { "background": "none", "text": "none", "foreground": "none" }
+  "effects": { "background": "gradient-subtle", "text": "shadow-soft", "foreground": "corners" }
 }`
         }]
       })
