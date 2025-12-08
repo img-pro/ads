@@ -3276,11 +3276,13 @@ function setupProductBriefSync() {
   } else if (dataBrief.value && !builderBrief.value) {
     builderBrief.value = dataBrief.value;
   }
-  updateProductCheckboxState();
+  // Pass true to preserve saved checkbox preference on initial load
+  updateProductCheckboxState(true);
 }
 
 // Enable/disable the "Update copy" checkbox based on product brief content
-function updateProductCheckboxState() {
+// Pass isInitialLoad=true during setup to avoid overwriting saved preference
+function updateProductCheckboxState(isInitialLoad = false) {
   const brief = document.getElementById('productBrief')?.value?.trim();
   const checkbox = document.getElementById('updateCopyCheckbox');
   if (checkbox) {
@@ -3288,8 +3290,9 @@ function updateProductCheckboxState() {
     checkbox.disabled = !brief;
     if (!brief) {
       checkbox.checked = false;
-    } else if (wasDisabled && !checkbox.disabled) {
-      // When enabling (brief just added), default to checked
+    } else if (wasDisabled && !checkbox.disabled && !isInitialLoad) {
+      // When enabling (brief just added by user), default to checked
+      // Skip on initial load to preserve saved preference
       checkbox.checked = true;
     }
   }
