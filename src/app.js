@@ -8,6 +8,34 @@ const ctx = canvas.getContext('2d');
 // AI-generated canvas decorations (rendered on canvas, exported with ad)
 let canvasDecorations = [];
 
+// Get layer overrides from UI (opacity > 0 = enabled)
+// Uses helper to handle NaN (missing element) vs 0 (intentionally disabled)
+function getLayerOverrides() {
+  const parseOpacity = (id) => {
+    const val = parseFloat(document.getElementById(id)?.value);
+    return isNaN(val) ? 1 : val;
+  };
+
+  const bgOpacity = parseOpacity('bgLayerOpacity');
+  const textOpacity = parseOpacity('textLayerOpacity');
+  const fgOpacity = parseOpacity('fgLayerOpacity');
+
+  return {
+    background: {
+      opacity: bgOpacity,
+      enabled: bgOpacity > 0
+    },
+    text: {
+      opacity: textOpacity,
+      enabled: textOpacity > 0
+    },
+    foreground: {
+      opacity: fgOpacity,
+      enabled: fgOpacity > 0
+    }
+  };
+}
+
 // ==========================================
 // DEFAULT SYSTEM PROMPT
 // ==========================================
@@ -139,9 +167,41 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     if (tabId === 'export') {
       renderVariationCards();
       renderPreview();
-      renderStyleHistory();
+      renderVersions();
     }
   });
+});
+
+// ==========================================
+// KEYBOARD NAVIGATION
+// ==========================================
+
+document.addEventListener('keydown', (e) => {
+  // Only handle arrow keys on Export tab when no input is focused
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+  const activeElement = document.activeElement;
+  const isInputFocused = activeElement.tagName === 'INPUT' ||
+                         activeElement.tagName === 'TEXTAREA' ||
+                         activeElement.tagName === 'SELECT';
+  if (isInputFocused) return;
+
+  // Check if Export tab is active
+  const exportTab = document.getElementById('export-tab');
+  if (!exportTab || !exportTab.classList.contains('active')) return;
+
+  // Navigate variations
+  if (dataRows.length === 0) return;
+
+  e.preventDefault();
+
+  if (e.key === 'ArrowUp') {
+    const newIndex = activeVariationIndex > 0 ? activeVariationIndex - 1 : dataRows.length - 1;
+    selectVariation(newIndex);
+  } else if (e.key === 'ArrowDown') {
+    const newIndex = activeVariationIndex < dataRows.length - 1 ? activeVariationIndex + 1 : 0;
+    selectVariation(newIndex);
+  }
 });
 
 // ==========================================
@@ -150,6 +210,179 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 function toggleSection(header) {
   header.parentElement.classList.toggle('collapsed');
+}
+
+// ==========================================
+// ELEMENT SETTINGS TOGGLES
+// ==========================================
+
+function toggleElementSettings(btn) {
+  const card = btn.closest('.element-card');
+  const settings = card.querySelector('.element-settings');
+  const isOpening = settings.classList.contains('collapsed');
+
+  // Collapse all other element settings first (accordion behavior)
+  document.querySelectorAll('.element-card .element-settings').forEach(s => {
+    if (s !== settings) {
+      s.classList.add('collapsed');
+      s.closest('.element-card').querySelector('.element-settings-btn')?.classList.remove('active');
+    }
+  });
+
+  // Toggle the clicked one
+  settings.classList.toggle('collapsed');
+  btn.classList.toggle('active');
+}
+
+// Clear element color override (reset to inherit from global)
+function clearElementColor(elementId) {
+  const colorText = document.getElementById(`${elementId}Color`);
+  const colorPicker = document.getElementById(`${elementId}ColorPicker`);
+
+  if (colorText) colorText.value = '';
+  if (colorPicker) colorPicker.value = '#FFFFFF';
+
+  updateColorSwatchState(elementId);
+  updateElementOverrideIndicators();
+  generateAd();
+  saveAppStateDebounced();
+}
+
+// Update color swatch empty state based on whether color is set
+function updateColorSwatchState(elementId) {
+  const colorText = document.getElementById(`${elementId}Color`);
+  const swatchWrap = document.getElementById(`${elementId}ColorWrap`);
+
+  if (!swatchWrap) return;
+
+  const val = colorText?.value;
+  // Has color if hex or rgba value
+  const hasColor = val && (/^#[0-9A-Fa-f]{6}$/i.test(val) || /^rgba?\(/i.test(val));
+  swatchWrap.classList.toggle('empty', !hasColor);
+}
+
+// Update element override indicators (blue dot when element has typography overrides)
+function updateElementOverrideIndicators() {
+  ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
+    const indicator = document.getElementById(`${elId}OverrideIndicator`);
+    if (!indicator) return;
+
+    const fontVal = document.getElementById(`${elId}Font`)?.value;
+    const colorVal = document.getElementById(`${elId}Color`)?.value;
+
+    // Check for any typography override (font or color)
+    const hasOverride =
+      (fontVal && fontVal !== '') ||
+      (colorVal && (/^#[0-9A-Fa-f]{6}$/i.test(colorVal) || /^rgba?\(/i.test(colorVal)));
+
+    indicator.classList.toggle('active', hasOverride);
+  });
+}
+
+// Wire up element color pickers (clearable pattern)
+function setupElementColorPickers() {
+  ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
+    const colorPicker = document.getElementById(`${elId}ColorPicker`);
+    const colorText = document.getElementById(`${elId}Color`);
+
+    if (colorPicker && colorText) {
+      // Color picker updates text and swatch state
+      colorPicker.addEventListener('input', () => {
+        colorText.value = colorPicker.value.toUpperCase();
+        updateColorSwatchState(elId);
+        updateElementOverrideIndicators();
+        generateAd();
+        saveAppStateDebounced();
+      });
+
+      // Text input updates picker and swatch state
+      // Supports hex (#FFFFFF) and rgba formats
+      colorText.addEventListener('input', () => {
+        let val = colorText.value;
+        // Uppercase hex values only
+        if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+          val = val.toUpperCase();
+          colorText.value = val;
+          if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            colorPicker.value = val;
+          }
+        }
+        updateColorSwatchState(elId);
+        updateElementOverrideIndicators();
+        generateAd();
+        saveAppStateDebounced();
+      });
+    }
+
+    // Wire up font select
+    const fontSelect = document.getElementById(`${elId}Font`);
+    if (fontSelect) {
+      fontSelect.addEventListener('change', () => {
+        updateElementOverrideIndicators();
+        generateAd();
+        saveAppStateDebounced();
+      });
+    }
+
+    // Initialize swatch state
+    updateColorSwatchState(elId);
+  });
+
+  // Initialize override indicators
+  updateElementOverrideIndicators();
+}
+
+// Wire up layer controls (opacity only - opacity 0 = disabled)
+// Uses requestAnimationFrame to throttle renders for smooth slider dragging
+let layerRafPending = false;
+function setupLayerControls() {
+  ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        const valEl = document.getElementById(`${id}Val`);
+        if (valEl) valEl.textContent = Math.round(parseFloat(el.value) * 100) + '%';
+
+        // Toggle disabled class on layer row (CSS attribute selectors don't track JS property changes)
+        const layerRow = el.closest('.layer-row');
+        if (layerRow) layerRow.classList.toggle('layer-disabled', parseFloat(el.value) === 0);
+
+        // Throttle generateAd calls using requestAnimationFrame
+        if (!layerRafPending) {
+          layerRafPending = true;
+          requestAnimationFrame(() => {
+            generateAd();
+            layerRafPending = false;
+          });
+        }
+        saveAppStateDebounced();
+      });
+    }
+  });
+}
+
+// Reset layer opacities to 50% (default for AI effects) and update UI
+function resetLayerOpacities() {
+  ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
+    const el = document.getElementById(id);
+    const valEl = document.getElementById(`${id}Val`);
+    if (el) {
+      el.value = 0.5;
+      if (valEl) valEl.textContent = '50%';
+      // Remove disabled class since opacity is now 50%
+      const layerRow = el.closest('.layer-row');
+      if (layerRow) layerRow.classList.remove('layer-disabled');
+    }
+  });
+}
+
+// Show/hide Layers card based on whether there are AI canvas decorations
+function updateLayersCardVisibility() {
+  const layersCard = document.querySelector('.layers-card');
+  if (!layersCard) return;
+
+  const hasDecorations = canvasDecorations.length > 0;
+  layersCard.classList.toggle('hidden', !hasDecorations);
 }
 
 // ==========================================
@@ -430,9 +663,7 @@ function updateDisplays() {
   const canvasHeight = parseInt(h);
 
   // Canvas dimensions
-  const canvasDims = document.getElementById('canvasDims');
   const canvasInfo = document.getElementById('canvasInfo');
-  if (canvasDims) canvasDims.textContent = `${w} × ${h}`;
   if (canvasInfo) canvasInfo.textContent = `${w} × ${h} px`;
 
   // Typography
@@ -470,6 +701,7 @@ function applyTransform(text, transform) {
   if (!text) return text;
   switch (transform) {
     case 'uppercase': return text.toUpperCase();
+    case 'lowercase': return text.toLowerCase();
     case 'capitalize': return text.replace(/\b\w/g, c => c.toUpperCase());
     default: return text;
   }
@@ -497,11 +729,14 @@ const exportCanvas = document.createElement('canvas');
 const exportCtx = exportCanvas.getContext('2d');
 
 // Shared render function used by Builder and Export
-function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1) {
+function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1, overrides = null) {
   const {
     bgColor, textColor, fontFamily, fontScale, letterSpacing, opticalYOffset,
     intro, headline, offer, legend
   } = template;
+
+  // Use provided overrides or get from UI
+  const layerOvr = overrides || getLayerOverrides();
 
   // Apply text transforms
   const introText = applyTransform(content.intro || '', intro.transform);
@@ -510,46 +745,66 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
   const offerText = applyTransform(content.offer || '', offer.transform);
   const legendText = applyTransform(content.legend || '', legend.transform);
 
-  // Calculate font sizes
-  const maxTextWidth = width * 0.88;
-  const introFontSize = fitText(targetCtx, introText, maxTextWidth, height * intro.size * fontScale, intro.weight, fontFamily, letterSpacing);
-  const headline1FontSize = fitText(targetCtx, headlineText1, maxTextWidth, height * headline.size * fontScale, headline.weight, fontFamily, letterSpacing);
-  const headline2FontSize = fitText(targetCtx, headlineText2, maxTextWidth, height * headline.size * fontScale, headline.weight, fontFamily, letterSpacing);
-  const offerFontSize = fitText(targetCtx, offerText, maxTextWidth, height * offer.size * fontScale, offer.weight, fontFamily, letterSpacing);
-  const legendFontSize = fitText(targetCtx, legendText, maxTextWidth, height * legend.size * fontScale, legend.weight, fontFamily, letterSpacing);
+  // Resolve per-element typography (inherit from global if not set)
+  const resolveFont = (el) => el.fontFamily || fontFamily;
+  const resolveSpacing = (el) => el.letterSpacing ?? letterSpacing;
+  const resolveColor = (el) => el.color || textColor;
 
-  // Build elements array
+  // Calculate font sizes with per-element fonts
+  const maxTextWidth = width * 0.88;
+  const introFontSize = fitText(targetCtx, introText, maxTextWidth, height * intro.size * fontScale, intro.weight, resolveFont(intro), resolveSpacing(intro));
+  const headline1FontSize = fitText(targetCtx, headlineText1, maxTextWidth, height * headline.size * fontScale, headline.weight, resolveFont(headline), resolveSpacing(headline));
+  const headline2FontSize = fitText(targetCtx, headlineText2, maxTextWidth, height * headline.size * fontScale, headline.weight, resolveFont(headline), resolveSpacing(headline));
+  const offerFontSize = fitText(targetCtx, offerText, maxTextWidth, height * offer.size * fontScale, offer.weight, resolveFont(offer), resolveSpacing(offer));
+  const legendFontSize = fitText(targetCtx, legendText, maxTextWidth, height * legend.size * fontScale, legend.weight, resolveFont(legend), resolveSpacing(legend));
+
+  // Build elements array with per-element typography
   const elements = [];
   let contentHeight = 0;
 
   if (introText) {
     const marginTop = height * intro.marginTop * fontScale;
     contentHeight += marginTop;
-    elements.push({ text: introText, fontSize: introFontSize, weight: intro.weight, marginTop });
+    elements.push({
+      text: introText, fontSize: introFontSize, weight: intro.weight, marginTop,
+      font: resolveFont(intro), spacing: resolveSpacing(intro), color: resolveColor(intro)
+    });
     contentHeight += introFontSize;
   }
   if (headlineText1) {
     const marginTop = height * headline.marginTop * fontScale;
     contentHeight += marginTop;
-    elements.push({ text: headlineText1, fontSize: headline1FontSize, weight: headline.weight, marginTop });
+    elements.push({
+      text: headlineText1, fontSize: headline1FontSize, weight: headline.weight, marginTop,
+      font: resolveFont(headline), spacing: resolveSpacing(headline), color: resolveColor(headline)
+    });
     contentHeight += headline1FontSize;
   }
   if (headlineText2) {
     const lineGap = headline1FontSize * (headline.lineHeight - 1);
     contentHeight += lineGap;
-    elements.push({ text: headlineText2, fontSize: headline2FontSize, weight: headline.weight, marginTop: lineGap });
+    elements.push({
+      text: headlineText2, fontSize: headline2FontSize, weight: headline.weight, marginTop: lineGap,
+      font: resolveFont(headline), spacing: resolveSpacing(headline), color: resolveColor(headline)
+    });
     contentHeight += headline2FontSize;
   }
   if (offerText) {
     const marginTop = height * offer.marginTop * fontScale;
     contentHeight += marginTop;
-    elements.push({ text: offerText, fontSize: offerFontSize, weight: offer.weight, marginTop });
+    elements.push({
+      text: offerText, fontSize: offerFontSize, weight: offer.weight, marginTop,
+      font: resolveFont(offer), spacing: resolveSpacing(offer), color: resolveColor(offer)
+    });
     contentHeight += offerFontSize;
   }
   if (legendText) {
     const marginTop = height * legend.marginTop * fontScale;
     contentHeight += marginTop;
-    elements.push({ text: legendText, fontSize: legendFontSize, weight: legend.weight, marginTop });
+    elements.push({
+      text: legendText, fontSize: legendFontSize, weight: legend.weight, marginTop,
+      font: resolveFont(legend), spacing: resolveSpacing(legend), color: resolveColor(legend)
+    });
     contentHeight += legendFontSize;
   }
 
@@ -561,8 +816,8 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
   targetCtx.fillStyle = bgColor;
   targetCtx.fillRect(0, 0, width, height);
 
-  // Background canvas commands
-  executeCanvasCommands(targetCtx, width, height, 'background', bgColor, textColor);
+  // Background canvas commands (with layer overrides)
+  executeCanvasCommands(targetCtx, width, height, 'background', bgColor, textColor, layerOvr);
 
   // Text setup
   const opticalOffset = height * opticalYOffset;
@@ -572,22 +827,26 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
   targetCtx.textAlign = 'center';
   targetCtx.textBaseline = 'top';
 
-  // Reset lineWidth before text commands so we can detect if AI sets it
+  // Reset stroke state before text commands - AI must explicitly set both
+  // lineWidth AND strokeStyle to get a visible stroke (prevents accidental black borders)
   targetCtx.lineWidth = 0;
+  targetCtx.strokeStyle = 'transparent';
 
-  // Text styling commands
-  executeCanvasCommands(targetCtx, width, height, 'text', bgColor, textColor);
+  // Text styling commands (with layer overrides)
+  executeCanvasCommands(targetCtx, width, height, 'text', bgColor, textColor, layerOvr);
 
-  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
-  const hasStroke = targetCtx.lineWidth > 0;
+  // AI must set lineWidth > 0 and a visible strokeStyle to enable stroke
+  const hasStroke = targetCtx.lineWidth > 0 && targetCtx.strokeStyle !== 'transparent';
 
-  // Draw text elements
+  // Draw text elements with per-element typography
   elements.forEach((el) => {
     currentY += el.marginTop;
-    targetCtx.font = `${el.weight} ${el.fontSize}px "${fontFamily}"`;
+    targetCtx.font = `${el.weight} ${el.fontSize}px "${el.font}"`;
+    targetCtx.fillStyle = el.color;
 
-    if (letterSpacing !== 0) {
-      const charSpacing = el.fontSize * letterSpacing;
+    const elSpacing = el.spacing;
+    if (elSpacing !== 0) {
+      const charSpacing = el.fontSize * elSpacing;
       const text = el.text;
       if (text) {
         const totalWidth = targetCtx.measureText(text).width + (text.length - 1) * charSpacing;
@@ -608,45 +867,93 @@ function renderAdToCanvas(targetCtx, width, height, template, content, scale = 1
     currentY += el.fontSize;
   });
 
-  // Foreground canvas commands
-  executeCanvasCommands(targetCtx, width, height, 'foreground', bgColor, textColor);
+  // Foreground canvas commands (with layer overrides)
+  executeCanvasCommands(targetCtx, width, height, 'foreground', bgColor, textColor, layerOvr);
 
   targetCtx.restore();
 }
 
+// Helper to get per-element font (empty string means inherit)
+function getElementFont(elementId) {
+  const val = document.getElementById(`${elementId}Font`)?.value;
+  return val === '' || val === 'inherit' ? null : val;
+}
+
+// Helper to get per-element letter spacing (null means inherit)
+function getElementSpacing(elementId) {
+  const el = document.getElementById(`${elementId}Spacing`);
+  if (!el || el.value === '' || el.value === 'inherit') return null;
+  return parseFloat(el.value);
+}
+
+// Helper to get per-element color (empty string means inherit)
+// Supports both hex (#FFFFFF) and rgba (rgba(255,255,255,0.65)) formats
+function getElementColor(elementId) {
+  const val = document.getElementById(`${elementId}Color`)?.value;
+  if (!val || val === '' || val === 'inherit') return null;
+  // Accept hex or rgba
+  if (/^#[0-9A-Fa-f]{6}$/i.test(val) || /^rgba?\(/i.test(val)) {
+    return val;
+  }
+  return null;
+}
+
 // Get current template from UI
 function getTemplateFromUI() {
+  // Global text transform (default for all elements)
+  const globalTransform = document.getElementById('textTransform')?.value || 'none';
+
+  // Helper to get element transform (empty = inherit from global)
+  const getTransform = (elementId) => {
+    const val = document.getElementById(`${elementId}Transform`)?.value;
+    // Empty string means "Inherit" - use global transform
+    return val === '' ? globalTransform : val;
+  };
+
   return {
     bgColor: document.getElementById('bgColor')?.value || '#0033FF',
     textColor: document.getElementById('textColor')?.value || '#FFFFFF',
     fontFamily: document.getElementById('fontFamily')?.value || 'Inter',
     fontScale: parseFloat(document.getElementById('fontScale')?.value) || 1,
     letterSpacing: parseFloat(document.getElementById('letterSpacing')?.value) || 0,
+    textTransform: globalTransform,
     opticalYOffset: parseFloat(document.getElementById('opticalYOffset')?.value) || 0.05,
     intro: {
       size: parseFloat(document.getElementById('introSize')?.value) || 0.06,
       weight: document.getElementById('introWeight')?.value || '500',
-      transform: document.getElementById('introTransform')?.value || 'none',
-      marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0
+      transform: getTransform('intro'),
+      marginTop: parseFloat(document.getElementById('introMarginTop')?.value) || 0,
+      fontFamily: getElementFont('intro'),
+      letterSpacing: getElementSpacing('intro'),
+      color: getElementColor('intro')
     },
     headline: {
       size: parseFloat(document.getElementById('headlineSize')?.value) || 0.16,
       weight: document.getElementById('headlineWeight')?.value || '700',
-      transform: document.getElementById('headlineTransform')?.value || 'uppercase',
+      transform: getTransform('headline'),
       marginTop: parseFloat(document.getElementById('headlineMarginTop')?.value) || 0.02,
-      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05
+      lineHeight: parseFloat(document.getElementById('headlineLineHeight')?.value) || 1.05,
+      fontFamily: getElementFont('headline'),
+      letterSpacing: getElementSpacing('headline'),
+      color: getElementColor('headline')
     },
     offer: {
       size: parseFloat(document.getElementById('offerSize')?.value) || 0.11,
       weight: document.getElementById('offerWeight')?.value || '800',
-      transform: document.getElementById('offerTransform')?.value || 'uppercase',
-      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15
+      transform: getTransform('offer'),
+      marginTop: parseFloat(document.getElementById('offerMarginTop')?.value) || 0.15,
+      fontFamily: getElementFont('offer'),
+      letterSpacing: getElementSpacing('offer'),
+      color: getElementColor('offer')
     },
     legend: {
       size: parseFloat(document.getElementById('legendSize')?.value) || 0.035,
       weight: document.getElementById('legendWeight')?.value || '400',
-      transform: document.getElementById('legendTransform')?.value || 'none',
-      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06
+      transform: getTransform('legend'),
+      marginTop: parseFloat(document.getElementById('legendMarginTop')?.value) || 0.06,
+      fontFamily: getElementFont('legend'),
+      letterSpacing: getElementSpacing('legend'),
+      color: getElementColor('legend')
     }
   };
 }
@@ -662,8 +969,20 @@ function getContentFromUI() {
   };
 }
 
-function generateAd() {
+async function generateAd() {
   updateDisplays();
+
+  // Collect and load all fonts that need to be loaded
+  const fontsToLoad = new Set();
+  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
+  fontsToLoad.add(fontFamily);
+  ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
+    const elFont = document.getElementById(`${elId}Font`)?.value;
+    if (elFont && elFont !== '' && elFont !== 'inherit') {
+      fontsToLoad.add(elFont);
+    }
+  });
+  await Promise.all(Array.from(fontsToLoad).map(f => ensureFontLoaded(f)));
 
   const width = parseInt(document.getElementById('width')?.value) || 1200;
   const height = parseInt(document.getElementById('height')?.value) || 628;
@@ -797,24 +1116,52 @@ async function ensureFontLoaded(fontFamily) {
   loadedFonts.add(fontFamily);
 }
 
-const originalGenerateAd = generateAd;
-generateAd = async function() {
-  const fontFamily = document.getElementById('fontFamily')?.value || 'Helvetica';
-  await ensureFontLoaded(fontFamily);
-  originalGenerateAd();
-};
-
 // ==========================================
 // BUILDER EVENT LISTENERS
 // ==========================================
 
+// Reset element overrides to "Inherit" when a global setting changes
+function resetElementOverridesToInherit(globalId) {
+  const elements = ['intro', 'headline', 'offer', 'legend'];
+
+  if (globalId === 'fontFamily') {
+    // Reset all element font overrides to inherit
+    elements.forEach(el => {
+      const select = document.getElementById(`${el}Font`);
+      if (select) select.value = '';
+    });
+    updateElementOverrideIndicators();
+  } else if (globalId === 'textTransform') {
+    // Reset all element transform overrides to inherit
+    elements.forEach(el => {
+      const select = document.getElementById(`${el}Transform`);
+      if (select) select.value = '';
+    });
+  }
+}
+
+// Throttle render calls for smooth slider dragging (especially on Safari)
+let builderRafPending = false;
 document.querySelectorAll('#builder-tab input, #builder-tab select').forEach(input => {
   input.addEventListener('input', (e) => {
+    // When global typography settings change, reset element overrides to inherit
+    if (e.target.id === 'fontFamily' || e.target.id === 'textTransform') {
+      resetElementOverridesToInherit(e.target.id);
+    }
+
     // When font changes, apply preset if one exists
     if (e.target.id === 'fontFamily') {
       applyFontPreset(e.target.value);
     }
-    generateAd();
+
+    // Throttle generateAd calls using requestAnimationFrame
+    if (!builderRafPending) {
+      builderRafPending = true;
+      requestAnimationFrame(() => {
+        generateAd();
+        builderRafPending = false;
+      });
+    }
     saveAppStateDebounced();
   });
 });
@@ -844,6 +1191,7 @@ function saveAppState() {
         fontFamily: document.getElementById('fontFamily')?.value,
         fontScale: document.getElementById('fontScale')?.value,
         letterSpacing: document.getElementById('letterSpacing')?.value,
+        textTransform: document.getElementById('textTransform')?.value,
         opticalYOffset: document.getElementById('opticalYOffset')?.value,
         // Content
         introText: document.getElementById('introText')?.value,
@@ -867,7 +1215,20 @@ function saveAppState() {
         legendSize: document.getElementById('legendSize')?.value,
         legendWeight: document.getElementById('legendWeight')?.value,
         legendTransform: document.getElementById('legendTransform')?.value,
-        legendMarginTop: document.getElementById('legendMarginTop')?.value
+        legendMarginTop: document.getElementById('legendMarginTop')?.value,
+        // Layer opacities (opacity 0 = disabled)
+        bgLayerOpacity: document.getElementById('bgLayerOpacity')?.value,
+        textLayerOpacity: document.getElementById('textLayerOpacity')?.value,
+        fgLayerOpacity: document.getElementById('fgLayerOpacity')?.value,
+        // Per-element typography overrides (color is empty string or hex)
+        introFont: document.getElementById('introFont')?.value,
+        introColor: document.getElementById('introColor')?.value,
+        headlineFont: document.getElementById('headlineFont')?.value,
+        headlineColor: document.getElementById('headlineColor')?.value,
+        offerFont: document.getElementById('offerFont')?.value,
+        offerColor: document.getElementById('offerColor')?.value,
+        legendFont: document.getElementById('legendFont')?.value,
+        legendColor: document.getElementById('legendColor')?.value
       },
       // Data tab
       data: {
@@ -881,7 +1242,9 @@ function saveAppState() {
       export: {
         platform: document.getElementById('exportPlatform')?.value,
         selectedSizes: Array.from(selectedExportSizes)
-      }
+      },
+      // Active version (index into saved versions)
+      activeVersionIndex: activeVersionIndex
     };
     localStorage.setItem('ad_studio_state', JSON.stringify(state));
   } catch (e) {
@@ -899,21 +1262,69 @@ function loadAppState() {
     // Restore Builder settings
     if (state.builder) {
       const b = state.builder;
+
+      // Restore regular input values
       Object.keys(b).forEach(key => {
         const el = document.getElementById(key);
-        if (el && b[key] !== undefined && b[key] !== null) {
+        if (!el || b[key] === undefined || b[key] === null) return;
+
+        // Handle checkboxes separately
+        if (el.type === 'checkbox') {
+          el.checked = b[key];
+        } else {
           el.value = b[key];
         }
       });
+
       // Sync color pickers
       const bgColor = document.getElementById('bgColor')?.value;
       const textColor = document.getElementById('textColor')?.value;
       if (bgColor) document.getElementById('bgColorPicker').value = bgColor;
       if (textColor) document.getElementById('textColorPicker').value = textColor;
+
       // Render size list for saved platform
       if (b.sizePlatform) {
         renderSizeList(b.sizePlatform);
       }
+
+      // Update layer opacity value displays
+      ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(`${id}Val`);
+        if (el && valEl) {
+          valEl.textContent = Math.round(parseFloat(el.value) * 100) + '%';
+        }
+      });
+
+      // Update all slider value displays using the canonical function
+      updateDisplays();
+
+      // Restore per-element colors and update swatch states
+      // Supports both hex and rgba formats
+      ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
+        const colorPicker = document.getElementById(`${elId}ColorPicker`);
+        const colorText = document.getElementById(`${elId}Color`);
+        const color = b[`${elId}Color`];
+
+        if (colorPicker && colorText) {
+          if (color && /^#[0-9A-Fa-f]{6}$/i.test(color)) {
+            // Hex color
+            colorText.value = color.toUpperCase();
+            colorPicker.value = color;
+          } else if (color && /^rgba?\(/i.test(color)) {
+            // RGBA color (from semantic tokens)
+            colorText.value = color;
+            colorPicker.value = '#FFFFFF'; // Picker can't show rgba
+          } else {
+            colorText.value = '';
+            colorPicker.value = '#FFFFFF';
+          }
+          updateColorSwatchState(elId);
+        }
+      });
+
+      // Update override indicators after restoring all element states
+      updateElementOverrideIndicators();
     }
 
     // Restore Data tab
@@ -952,6 +1363,12 @@ function loadAppState() {
       if (state.export.selectedSizes) {
         selectedExportSizes = new Set(state.export.selectedSizes);
       }
+    }
+
+    // Restore active version index (will be applied after versions load)
+    if (typeof state.activeVersionIndex === 'number' && state.activeVersionIndex >= 0) {
+      // Store for later - versions aren't loaded yet
+      window._pendingActiveVersionIndex = state.activeVersionIndex;
     }
 
     return true;
@@ -1136,6 +1553,165 @@ document.getElementById('selectAllExport')?.addEventListener('change', (e) => {
   renderVariationCards();
   updateExportSummary();
 });
+
+// ==========================================
+// DATA IMPORT/EXPORT (CSV)
+// ==========================================
+
+function exportDataCSV() {
+  if (dataRows.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  const headers = ['intro', 'headline1', 'headline2', 'offer', 'legend'];
+  const csvRows = [headers.join(',')];
+
+  dataRows.forEach(row => {
+    const values = headers.map(h => {
+      const val = row[h] || '';
+      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return '"' + val.replace(/"/g, '""') + '"';
+      }
+      return val;
+    });
+    csvRows.push(values.join(','));
+  });
+
+  const csv = csvRows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ad-variations.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importDataCSV() {
+  document.getElementById('csvFileInput').click();
+}
+
+function handleCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+
+    if (rows.length === 0) {
+      alert('No data found in file');
+      return;
+    }
+
+    // Detect headers
+    const firstRow = rows[0].map(c => c.toLowerCase().trim());
+    const headerMap = {};
+    const knownHeaders = ['intro', 'headline1', 'headline2', 'offer', 'legend', 'headline 1', 'headline 2'];
+
+    let hasHeaders = false;
+    firstRow.forEach((cell, i) => {
+      if (knownHeaders.includes(cell)) {
+        hasHeaders = true;
+        // Normalize header names
+        const normalized = cell.replace(' ', '');
+        headerMap[normalized] = i;
+      }
+    });
+
+    // If no headers detected, assume column order: intro, headline1, headline2, offer, legend
+    if (!hasHeaders) {
+      headerMap.intro = 0;
+      headerMap.headline1 = 1;
+      headerMap.headline2 = 2;
+      headerMap.offer = 3;
+      headerMap.legend = 4;
+    }
+
+    const dataStartIndex = hasHeaders ? 1 : 0;
+    const importedRows = [];
+
+    for (let i = dataStartIndex; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.every(cell => !cell.trim())) continue; // Skip empty rows
+
+      importedRows.push({
+        intro: row[headerMap.intro] || '',
+        headline1: row[headerMap.headline1] || '',
+        headline2: row[headerMap.headline2] || '',
+        offer: row[headerMap.offer] || '',
+        legend: row[headerMap.legend] || '',
+        selected: true
+      });
+    }
+
+    if (importedRows.length === 0) {
+      alert('No valid rows found in file');
+      return;
+    }
+
+    // Add to existing data
+    dataRows.push(...importedRows);
+    saveAppStateDebounced();
+    renderDataTable();
+    renderVariationCards();
+
+    alert(`Imported ${importedRows.length} row${importedRows.length > 1 ? 's' : ''}`);
+  };
+
+  reader.readAsText(file);
+  // Reset input so same file can be imported again
+  event.target.value = '';
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let currentRow = [];
+  let currentCell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++; // Skip next quote
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',' || char === '\t') {
+        currentRow.push(currentCell.trim());
+        currentCell = '';
+      } else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+        currentRow.push(currentCell.trim());
+        if (currentRow.length > 0) rows.push(currentRow);
+        currentRow = [];
+        currentCell = '';
+        if (char === '\r') i++; // Skip \n in \r\n
+      } else if (char !== '\r') {
+        currentCell += char;
+      }
+    }
+  }
+
+  // Don't forget last cell/row
+  if (currentCell || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(cell => cell)) rows.push(currentRow);
+  }
+
+  return rows;
+}
 
 // ==========================================
 // EXPORT SIZE LIST
@@ -1412,7 +1988,14 @@ async function exportAllAds() {
   // Get current template settings from UI
   const template = getTemplateFromUI();
 
-  await ensureFontLoaded(template.fontFamily);
+  // Load all fonts (global + per-element overrides)
+  const fontsToLoad = new Set([template.fontFamily]);
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    if (template[el]?.fontFamily) {
+      fontsToLoad.add(template[el].fontFamily);
+    }
+  });
+  await Promise.all(Array.from(fontsToLoad).map(f => ensureFontLoaded(f)));
 
   try {
     for (let i = 0; i < selectedRows.length; i++) {
@@ -1519,31 +2102,270 @@ function loadDefaults() {
 }
 
 // ==========================================
-// STYLE HISTORY
+// SAVED VERSIONS
 // ==========================================
+// Versions capture the complete design state (everything except text content)
+// User explicitly saves when they have a design they want to keep
 
-const MAX_STYLE_HISTORY = 8;
-let styleHistory = [];
-let activeStyleIndex = -1;
+const MAX_VERSIONS = 12;
+let savedVersions = [];
+let activeVersionIndex = -1;
 
-function loadStyleHistory() {
+function loadVersions() {
   try {
-    const saved = localStorage.getItem('ad_studio_style_history');
+    const saved = localStorage.getItem('ad_studio_versions');
     if (saved) {
-      styleHistory = JSON.parse(saved);
+      savedVersions = JSON.parse(saved);
     }
   } catch (e) {
-    console.warn('Failed to load style history:', e);
-    styleHistory = [];
+    console.warn('Failed to load versions:', e);
+    savedVersions = [];
   }
 }
 
-function saveStyleHistory() {
+function persistVersions() {
   try {
-    localStorage.setItem('ad_studio_style_history', JSON.stringify(styleHistory));
+    localStorage.setItem('ad_studio_versions', JSON.stringify(savedVersions));
   } catch (e) {
-    console.warn('Failed to save style history:', e);
+    console.warn('Failed to save versions:', e);
   }
+}
+
+// Capture the complete current UI state as a version
+function getCurrentVersion() {
+  const getVal = (id) => document.getElementById(id)?.value || '';
+  const getNum = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+  return {
+    // Canvas
+    width: parseInt(getVal('width')) || 1200,
+    height: parseInt(getVal('height')) || 628,
+
+    // Colors
+    bgColor: getVal('bgColor'),
+    textColor: getVal('textColor'),
+
+    // Global Typography
+    fontFamily: getVal('fontFamily'),
+    fontScale: getNum('fontScale'),
+    letterSpacing: getNum('letterSpacing'),
+    textTransform: getVal('textTransform'),
+
+    // Layout
+    opticalYOffset: getNum('opticalYOffset'),
+
+    // Per-element settings
+    intro: {
+      font: getVal('introFont'),
+      weight: getVal('introWeight'),
+      transform: getVal('introTransform'),
+      color: getVal('introColor'),
+      size: getNum('introSize'),
+      marginTop: getNum('introMarginTop')
+    },
+    headline: {
+      font: getVal('headlineFont'),
+      weight: getVal('headlineWeight'),
+      transform: getVal('headlineTransform'),
+      color: getVal('headlineColor'),
+      size: getNum('headlineSize'),
+      lineHeight: getNum('headlineLineHeight'),
+      marginTop: getNum('headlineMarginTop')
+    },
+    offer: {
+      font: getVal('offerFont'),
+      weight: getVal('offerWeight'),
+      transform: getVal('offerTransform'),
+      color: getVal('offerColor'),
+      size: getNum('offerSize'),
+      marginTop: getNum('offerMarginTop')
+    },
+    legend: {
+      font: getVal('legendFont'),
+      weight: getVal('legendWeight'),
+      transform: getVal('legendTransform'),
+      color: getVal('legendColor'),
+      size: getNum('legendSize'),
+      marginTop: getNum('legendMarginTop')
+    },
+
+    // Layer opacities (0 = disabled, which is a valid user choice)
+    layers: {
+      background: getNum('bgLayerOpacity'),
+      text: getNum('textLayerOpacity'),
+      foreground: getNum('fgLayerOpacity')
+    },
+
+    // AI Canvas effects (stored as effect names for lookup in EFFECT_LIBRARY)
+    canvas: {
+      background: canvasDecorations.find(c => c.layer === 'background')?.effectName || null,
+      text: canvasDecorations.find(c => c.layer === 'text')?.effectName || null,
+      foreground: canvasDecorations.find(c => c.layer === 'foreground')?.effectName || null
+    },
+
+    // Style prompt for reference
+    stylePrompt: getVal('stylePrompt')
+  };
+}
+
+// Apply a saved version to the UI
+async function applyVersion(index) {
+  const version = savedVersions[index];
+  if (!version) return;
+
+  activeVersionIndex = index;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+
+  const setColor = (pickerId, textId, val, isGlobal = false) => {
+    const textEl = document.getElementById(textId);
+    const picker = document.getElementById(pickerId);
+
+    if (val) {
+      if (textEl) textEl.value = val;
+      if (picker && /^#[0-9A-Fa-f]{6}$/i.test(val)) {
+        picker.value = val;
+      }
+    } else if (!isGlobal) {
+      // For per-element colors, empty value means "inherit from global"
+      if (textEl) textEl.value = '';
+      if (picker) picker.value = '#FFFFFF';
+    }
+  };
+
+  // Canvas size
+  setVal('width', version.width);
+  setVal('height', version.height);
+
+  // Colors (global colors should always have a value)
+  setColor('bgColorPicker', 'bgColor', version.bgColor, true);
+  setColor('textColorPicker', 'textColor', version.textColor, true);
+
+  // Global Typography
+  setVal('fontFamily', version.fontFamily);
+  setVal('fontScale', version.fontScale);
+  setVal('letterSpacing', version.letterSpacing);
+  setVal('textTransform', version.textTransform);
+
+  // Layout
+  setVal('opticalYOffset', version.opticalYOffset);
+
+  // Per-element settings
+  if (version.intro) {
+    setVal('introFont', version.intro.font);
+    setVal('introWeight', version.intro.weight);
+    setVal('introTransform', version.intro.transform);
+    setColor('introColorPicker', 'introColor', version.intro.color);
+    setVal('introSize', version.intro.size);
+    setVal('introMarginTop', version.intro.marginTop);
+    updateColorSwatchState('intro');
+  }
+  if (version.headline) {
+    setVal('headlineFont', version.headline.font);
+    setVal('headlineWeight', version.headline.weight);
+    setVal('headlineTransform', version.headline.transform);
+    setColor('headlineColorPicker', 'headlineColor', version.headline.color);
+    setVal('headlineSize', version.headline.size);
+    setVal('headlineLineHeight', version.headline.lineHeight);
+    setVal('headlineMarginTop', version.headline.marginTop);
+    updateColorSwatchState('headline');
+  }
+  if (version.offer) {
+    setVal('offerFont', version.offer.font);
+    setVal('offerWeight', version.offer.weight);
+    setVal('offerTransform', version.offer.transform);
+    setColor('offerColorPicker', 'offerColor', version.offer.color);
+    setVal('offerSize', version.offer.size);
+    setVal('offerMarginTop', version.offer.marginTop);
+    updateColorSwatchState('offer');
+  }
+  if (version.legend) {
+    setVal('legendFont', version.legend.font);
+    setVal('legendWeight', version.legend.weight);
+    setVal('legendTransform', version.legend.transform);
+    setColor('legendColorPicker', 'legendColor', version.legend.color);
+    setVal('legendSize', version.legend.size);
+    setVal('legendMarginTop', version.legend.marginTop);
+    updateColorSwatchState('legend');
+  }
+
+  // Layer opacities
+  if (version.layers) {
+    setVal('bgLayerOpacity', version.layers.background);
+    setVal('textLayerOpacity', version.layers.text);
+    setVal('fgLayerOpacity', version.layers.foreground);
+    // Update displays and disabled class
+    ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
+      const el = document.getElementById(id);
+      const valEl = document.getElementById(`${id}Val`);
+      if (el && valEl) valEl.textContent = Math.round(parseFloat(el.value) * 100) + '%';
+      const layerRow = el?.closest('.layer-row');
+      if (layerRow) layerRow.classList.toggle('layer-disabled', parseFloat(el.value) === 0);
+    });
+  }
+
+  // AI Canvas effects (lookup from EFFECT_LIBRARY by name)
+  canvasDecorations = [];
+  if (version.canvas) {
+    if (version.canvas.background && EFFECT_LIBRARY.background[version.canvas.background]) {
+      canvasDecorations.push({
+        layer: 'background',
+        draw: EFFECT_LIBRARY.background[version.canvas.background],
+        effectName: version.canvas.background
+      });
+    }
+    if (version.canvas.text && EFFECT_LIBRARY.text[version.canvas.text]) {
+      canvasDecorations.push({
+        layer: 'text',
+        draw: EFFECT_LIBRARY.text[version.canvas.text],
+        effectName: version.canvas.text
+      });
+    }
+    if (version.canvas.foreground && EFFECT_LIBRARY.foreground[version.canvas.foreground]) {
+      canvasDecorations.push({
+        layer: 'foreground',
+        draw: EFFECT_LIBRARY.foreground[version.canvas.foreground],
+        effectName: version.canvas.foreground
+      });
+    }
+  }
+
+  // Style prompt
+  setVal('stylePrompt', version.stylePrompt || '');
+
+  // Update slider value displays
+  updateAllSliderDisplays();
+
+  // Update override indicators
+  updateElementOverrideIndicators();
+
+  // Update layers card visibility
+  updateLayersCardVisibility();
+
+  // Update canvas info
+  updateCanvasInfo();
+
+  // Await generateAd to ensure fonts are loaded before rendering preview
+  await generateAd();
+  renderPreview();
+  renderVersions();
+  saveAppStateDebounced();
+}
+
+// Update all slider value displays - delegates to updateDisplays() for consistency
+function updateAllSliderDisplays() {
+  updateDisplays();
+}
+
+// Update canvas info display
+function updateCanvasInfo() {
+  const width = document.getElementById('width')?.value || 1200;
+  const height = document.getElementById('height')?.value || 628;
+  const canvasInfo = document.getElementById('canvasInfo');
+  if (canvasInfo) canvasInfo.textContent = `${width} × ${height} px`;
 }
 
 async function generateStyleThumbnail() {
@@ -1570,27 +2392,36 @@ async function generateStyleThumbnail() {
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, thumbWidth, thumbHeight);
 
+  // Default overrides for thumbnails (full opacity, all enabled)
+  const defaultOverrides = {
+    background: { opacity: 1, enabled: true },
+    text: { opacity: 1, enabled: true },
+    foreground: { opacity: 1, enabled: true }
+  };
+
   // 2. Execute background canvas commands (gradients, patterns)
-  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'background', bgColor, textColor);
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'background', bgColor, textColor, defaultOverrides);
 
   // 3. Set up text styling
   ctx.fillStyle = textColor;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Reset lineWidth before text commands so we can detect if AI sets it
+  // Reset stroke state before text commands - AI must explicitly set both
+  // lineWidth AND strokeStyle to get a visible stroke (prevents accidental black borders)
   ctx.lineWidth = 0;
+  ctx.strokeStyle = 'transparent';
 
   // 4. Execute text layer commands (shadows, strokes, fills)
-  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'text', bgColor, textColor);
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'text', bgColor, textColor, defaultOverrides);
 
   // 5. Draw specimen text - large "Aa" that shows typography clearly
   const fontSize = 48;
   const fontWeight = template.headline.weight || '700';
   ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
 
-  // AI must set lineWidth > 0 to enable stroke (we reset it to 0 above)
-  const hasStroke = ctx.lineWidth > 0;
+  // AI must set lineWidth > 0 and a visible strokeStyle to enable stroke
+  const hasStroke = ctx.lineWidth > 0 && ctx.strokeStyle !== 'transparent';
 
   // Draw with letter spacing if set
   const text = 'Aa';
@@ -1611,122 +2442,76 @@ async function generateStyleThumbnail() {
   }
 
   // 6. Execute foreground canvas commands (borders, vignettes)
-  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'foreground', bgColor, textColor);
+  executeCanvasCommands(ctx, thumbWidth, thumbHeight, 'foreground', bgColor, textColor, defaultOverrides);
 
   return thumbCanvas.toDataURL('image/png', 0.9);
 }
 
-async function addStyleToHistory(prompt, design, canvasCode) {
+// Save current state as a new version
+async function saveCurrentVersion() {
   const thumbnail = await generateStyleThumbnail();
+  const version = getCurrentVersion();
 
-  const style = {
+  const versionEntry = {
     id: Date.now(),
-    prompt: prompt,
+    timestamp: Date.now(),
     thumbnail: thumbnail,
-    design: design,
-    canvas: canvasCode
+    ...version
   };
 
   // Add to beginning of array
-  styleHistory.unshift(style);
+  savedVersions.unshift(versionEntry);
 
   // Limit to max items
-  if (styleHistory.length > MAX_STYLE_HISTORY) {
-    styleHistory = styleHistory.slice(0, MAX_STYLE_HISTORY);
+  if (savedVersions.length > MAX_VERSIONS) {
+    savedVersions = savedVersions.slice(0, MAX_VERSIONS);
   }
 
-  activeStyleIndex = 0;
-  saveStyleHistory();
-  renderStyleHistory();
+  activeVersionIndex = 0;
+  persistVersions();
+  renderVersions();
+  saveAppStateDebounced();
 }
 
-function applyStyleFromHistory(index) {
-  const style = styleHistory[index];
-  if (!style) return;
-
-  activeStyleIndex = index;
-
-  // Apply design settings
-  if (style.design) {
-    const d = style.design;
-    if (d.bgColor) {
-      document.getElementById('bgColor').value = d.bgColor;
-      document.getElementById('bgColorPicker').value = d.bgColor;
-    }
-    if (d.textColor) {
-      document.getElementById('textColor').value = d.textColor;
-      document.getElementById('textColorPicker').value = d.textColor;
-    }
-    if (d.fontFamily) {
-      const fontSelect = document.getElementById('fontFamily');
-      const option = Array.from(fontSelect.options).find(o => o.value === d.fontFamily);
-      if (option) {
-        fontSelect.value = d.fontFamily;
-        applyFontPreset(d.fontFamily);
-      }
-    }
-    if (typeof d.fontScale === 'number') {
-      document.getElementById('fontScale').value = d.fontScale;
-    }
-    if (typeof d.letterSpacing === 'number') {
-      document.getElementById('letterSpacing').value = d.letterSpacing;
-    }
-  }
-
-  // Apply canvas commands
-  canvasDecorations = [];
-  if (style.canvas) {
-    if (style.canvas.background) {
-      const bgCmd = parseDrawingCode(style.canvas.background, 'background');
-      if (bgCmd) canvasDecorations.push(bgCmd);
-    }
-    if (style.canvas.text) {
-      const textCmd = parseDrawingCode(style.canvas.text, 'text');
-      if (textCmd) canvasDecorations.push(textCmd);
-    }
-    if (style.canvas.foreground) {
-      const fgCmd = parseDrawingCode(style.canvas.foreground, 'foreground');
-      if (fgCmd) canvasDecorations.push(fgCmd);
-    }
-  }
-
-  // Update prompt field
-  const promptEl = document.getElementById('stylePrompt');
-  if (promptEl && style.prompt) {
-    promptEl.value = style.prompt;
-  }
-
-  generateAd();
-  renderPreview();
-  renderStyleHistory();
-}
-
-function deleteStyleFromHistory(index, event) {
+// Delete a saved version
+function deleteVersion(index, event) {
   event.stopPropagation();
-  styleHistory.splice(index, 1);
+  savedVersions.splice(index, 1);
 
-  if (activeStyleIndex === index) {
-    activeStyleIndex = -1;
-  } else if (activeStyleIndex > index) {
-    activeStyleIndex--;
+  if (activeVersionIndex === index) {
+    activeVersionIndex = -1;
+  } else if (activeVersionIndex > index) {
+    activeVersionIndex--;
   }
 
-  saveStyleHistory();
-  renderStyleHistory();
+  persistVersions();
+  renderVersions();
+  saveAppStateDebounced();
 }
 
-function renderStyleHistory() {
+// Render the versions strip with save button
+function renderVersions() {
   const containers = [
     document.getElementById('styleHistory'),
     document.getElementById('styleHistoryExport')
   ];
 
-  const html = styleHistory.map((style, index) => `
-    <div class="style-thumb${index === activeStyleIndex ? ' active' : ''}"
-         onclick="applyStyleFromHistory(${index})"
-         title="${escapeHtml(style.prompt || 'Untitled style')}">
-      <img src="${escapeHtml(style.thumbnail || '')}" alt="Style ${index + 1}">
-      <button class="style-thumb-delete" onclick="deleteStyleFromHistory(${index}, event)">
+  // Save button (only in builder, not export)
+  const saveBtn = `
+    <button class="version-save-btn" onclick="saveCurrentVersion()" title="Save current design as a version">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  `;
+
+  const thumbs = savedVersions.map((version, index) => `
+    <div class="style-thumb${index === activeVersionIndex ? ' active' : ''}"
+         onclick="applyVersion(${index})"
+         title="${escapeHtml(version.stylePrompt || 'Saved version')}">
+      <img src="${escapeHtml(version.thumbnail || '')}" alt="Version ${index + 1}">
+      <button class="style-thumb-delete" onclick="deleteVersion(${index}, event)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -1734,8 +2519,11 @@ function renderStyleHistory() {
     </div>
   `).join('');
 
-  containers.forEach(container => {
-    if (container) container.innerHTML = html;
+  containers.forEach((container, i) => {
+    if (container) {
+      // Only show save button in builder (first container)
+      container.innerHTML = (i === 0 ? saveBtn : '') + thumbs;
+    }
   });
 }
 
@@ -1743,15 +2531,25 @@ function renderStyleHistory() {
 // AI CANVAS STYLING
 // ==========================================
 
-// Execute AI-generated canvas drawing commands
-function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textColor) {
+// Execute AI-generated canvas drawing commands with layer overrides
+function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textColor, overrides) {
+  const layerOverride = overrides?.[layer] || { opacity: 1, enabled: true };
+
+  // Skip if layer is disabled
+  if (!layerOverride.enabled) return;
+
   const commands = canvasDecorations.filter(cmd => cmd.layer === layer);
+  if (commands.length === 0) return;
 
   commands.forEach(cmd => {
     try {
       // For 'text' layer, don't save/restore - we want the styles to persist for text rendering
       if (layer !== 'text') {
         targetCtx.save();
+        // Apply layer opacity
+        if (layerOverride.opacity !== 1) {
+          targetCtx.globalAlpha = layerOverride.opacity;
+        }
       }
 
       // Execute the drawing function with context, dimensions, and colors
@@ -1769,6 +2567,49 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
       }
     }
   });
+
+  // For text layer, apply opacity to shadows/effects only
+  // The actual text fill will be drawn at full opacity, but shadows/strokes will be dimmed
+  if (layer === 'text' && layerOverride.opacity !== 1) {
+    // Helper to scale color alpha (supports hex and rgba formats)
+    const scaleColorAlpha = (color, opacity) => {
+      if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return color;
+
+      // Handle hex colors (#RGB, #RRGGBB)
+      const hexMatch = color.match(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
+      if (hexMatch) {
+        let hex = hexMatch[1];
+        if (hex.length === 3) {
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+
+      // Handle rgba/rgb colors
+      const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1], g = rgbaMatch[2], b = rgbaMatch[3];
+        const a = rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1;
+        return `rgba(${r}, ${g}, ${b}, ${a * opacity})`;
+      }
+
+      return color;
+    };
+
+    // Scale shadow opacity
+    targetCtx.shadowColor = scaleColorAlpha(targetCtx.shadowColor, layerOverride.opacity);
+
+    // Scale stroke opacity (text outlines are an AI effect)
+    if (targetCtx.lineWidth > 0) {
+      targetCtx.strokeStyle = scaleColorAlpha(targetCtx.strokeStyle, layerOverride.opacity);
+    }
+
+    // Note: globalAlpha and fillStyle are NOT modified - text fill renders at full opacity
+    // Only the shadow and stroke effects are dimmed
+  }
 }
 
 // Parse AI-generated drawing code into executable functions
@@ -1804,7 +2645,7 @@ function parseDrawingCode(code, layer) {
     // Create a function from the code string
     // The function receives: ctx, w, h, bg, fg (foreground/text color)
     const fn = new Function('ctx', 'w', 'h', 'bg', 'fg', code);
-    return { layer, draw: fn };
+    return { layer, draw: fn, code }; // Store original code for saving versions
   } catch (e) {
     console.warn('Failed to parse drawing code:', e);
     return null;
@@ -1831,10 +2672,22 @@ async function applyCanvasStyle() {
   const currentState = {
     bgColor: document.getElementById('bgColor')?.value,
     textColor: document.getElementById('textColor')?.value,
-    fontFamily: document.getElementById('fontFamily')?.value,
-    fontScale: document.getElementById('fontScale')?.value,
-    letterSpacing: document.getElementById('letterSpacing')?.value
+    fontFamily: document.getElementById('fontFamily')?.value
   };
+
+  // Build the effect options list from EFFECT_LIBRARY
+  const bgEffects = Object.keys(EFFECT_LIBRARY.background).join(', ');
+  const textEffects = Object.keys(EFFECT_LIBRARY.text).join(', ');
+  const fgEffects = Object.keys(EFFECT_LIBRARY.foreground).join(', ');
+
+  // Build font list from FONT_MOODS with descriptions (shuffled to avoid AI bias)
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  const shuffledMoods = shuffle(Object.entries(FONT_MOODS));
+  const fontList = shuffledMoods.map(([mood, data]) => {
+    const shuffledFonts = shuffle(data.fonts);
+    const fontEntries = shuffledFonts.map(f => `${f.name} (${f.desc})`).join(', ');
+    return `${mood.toUpperCase()}: ${data.description}\n       → ${fontEntries}`;
+  }).join('\n     ');
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1846,38 +2699,19 @@ async function applyCanvasStyle() {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5-20251101',
-        max_tokens: 4096,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `You are a world-class advertising art director. Style this ad based on the request:
+          content: `You are a world-class advertising art director. Style this ad:
 
 "${prompt}"
 
-## THE AD
-This is a performance marketing ad with a clear typographic hierarchy:
-- INTRO (Whisper): Small qualifier text, identifies the audience
-- HEADLINE (Shout): The hero text, largest element, emotional hook — 50% of visual weight
-- OFFER (Speak): Clear call-to-action
-- LEGEND (Murmur): Small trust signal or friction remover
-
-The text is ALWAYS the hero. Every design decision must serve readability and impact.
-
-## DESIGN PRINCIPLES
-Study these references:
-- Apple: Pristine simplicity, massive typography, restrained color, perfect contrast
-- Nike: Bold, kinetic, high contrast, typography as graphic element
-- Spotify: Vibrant duotones, energetic gradients, modern and fresh
-- Stripe: Sophisticated gradients, subtle depth, premium feel
-- Linear: Dark mode excellence, subtle glows, refined minimalism
-
-Key principles:
-- Contrast is king. Text must pop immediately.
-- Restraint over decoration. Every element must earn its place.
-- Typography IS the design. Don't compete with it.
-- Shadows add depth, not noise. Subtle and purposeful.
-- Color harmony matters. 2-3 colors maximum.
-- White space is active design, not emptiness.
+## DESIGN PHILOSOPHY
+- Typography is 80% of the design — the ad must look stunning with ZERO effects
+- Color creates mood, contrast creates readability (minimum 4.5:1 ratio)
+- Effects enhance, never compete — when in doubt, use "none"
+- Restraint over decoration — every choice must earn its place
 
 ## CURRENT STATE
 - Background: ${currentState.bgColor}
@@ -1886,33 +2720,49 @@ Key principles:
 
 ## YOUR CONTROLS
 
-1. DESIGN (UI controls):
-   - bgColor: hex color
-   - textColor: hex color
-   - fontFamily: Inter, Montserrat, Space Grotesk, DM Sans, Poppins, Bebas Neue, Oswald, Anton, Barlow Condensed, Archivo Black, Roboto, Open Sans, Lato, Helvetica
-   - fontScale: 0.5-1.5
-   - letterSpacing: -0.05 to 0.15
+1. COLORS (required)
+   - bgColor: hex color (e.g., "#0A0A0A")
+   - textColor: hex color with strong contrast against bgColor
 
-2. CANVAS (JS code for Canvas 2D API):
-   Parameters available: ctx, w, h, bg, fg
+2. TYPOGRAPHY (required)
+   - fontFamily: Choose ONE font that best matches the ad's mood and message:
+     ${fontList}
+   - fontScale: 0.85-1.15 (subtle size adjustment, 1.0 is default)
+   - letterSpacing: -0.02 to 0.05 (subtle spacing adjustment)
 
-   Three layers you can use:
-   - "background": After solid fill, before text. Use for gradients, subtle patterns, atmosphere.
-   - "text": Context state for text rendering. Set shadowColor, shadowBlur, shadowOffsetX/Y, fillStyle, strokeStyle, lineWidth here. State persists for text drawing.
-   - "foreground": After text. Borders, vignettes, finishing touches.
+3. EFFECTS (optional — select by name, or "none")
+   Background effects: ${bgEffects}
+   Text effects: ${textEffects}
+   Foreground effects: ${fgEffects}
+
+## EFFECT GUIDANCE
+Background effects:
+- Dark backgrounds: "gradient-subtle", "gradient-radial", or "vignette-light"
+- Light backgrounds: "gradient-diagonal" or "duotone-cool"
+- Minimalist: "none"
+
+Text effects:
+- Dark backgrounds: "shadow-soft", "shadow-medium", or "lift"
+- Light backgrounds: "shadow-hard" adds punch
+- Glowing/neon: "glow-soft" or "glow-medium"
+
+Foreground effects (framing and polish):
+- Premium/luxury: "corners" or "border-thin" — adds refinement
+- Editorial/news: "line-bottom" — grounds the composition
+- Bold/contained: "border-medium" or "border-bold" — strong framing
+- Cinematic: "gradient-fade-bottom" — dramatic depth
 
 ## CRITICAL RULES
-- NEVER reduce text legibility
-- Shadows should lift text, not muddy it
-- If using text shadows: subtle blur (8-20px), low opacity (0.2-0.4)
-- Background effects stay in background — never compete with text
-- Borders and frames: thin, subtle, purposeful
-- When in doubt, do less
+- ALWAYS ensure high contrast between bgColor and textColor
+- Typography IS the design — effects enhance, never dominate
+- Consider using foreground effects to add polish and framing
+- Pick at most ONE effect per layer
 
 Return ONLY valid JSON:
 {
-  "design": { "bgColor": "#...", "textColor": "#...", "fontFamily": "...", "fontScale": 1, "letterSpacing": 0 },
-  "canvas": { "background": "// JS code or empty string", "text": "// JS code or empty string", "foreground": "// JS code or empty string" }
+  "colors": { "bgColor": "#...", "textColor": "#..." },
+  "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
+  "effects": { "background": "gradient-subtle", "text": "shadow-soft", "foreground": "corners" }
 }`
         }]
       })
@@ -1937,55 +2787,97 @@ Return ONLY valid JSON:
     // Clear previous canvas commands
     canvasDecorations = [];
 
-    // Apply design changes (actual ad controls)
-    if (styles.design) {
-      const d = styles.design;
+    // Apply colors with contrast validation
+    if (styles.colors) {
+      let bgColor = styles.colors.bgColor;
+      let textColor = styles.colors.textColor;
 
-      if (d.bgColor && /^#[0-9A-Fa-f]{6}$/.test(d.bgColor)) {
-        document.getElementById('bgColor').value = d.bgColor.toUpperCase();
-        document.getElementById('bgColorPicker').value = d.bgColor;
+      if (bgColor && /^#[0-9A-Fa-f]{6}$/.test(bgColor)) {
+        // Validate and fix contrast if needed
+        if (textColor && /^#[0-9A-Fa-f]{6}$/.test(textColor)) {
+          textColor = ensureContrast(bgColor, textColor);
+        } else {
+          textColor = ensureContrast(bgColor, '#FFFFFF');
+        }
+
+        document.getElementById('bgColor').value = bgColor.toUpperCase();
+        document.getElementById('bgColorPicker').value = bgColor;
+        document.getElementById('textColor').value = textColor.toUpperCase();
+        document.getElementById('textColorPicker').value = textColor;
       }
-      if (d.textColor && /^#[0-9A-Fa-f]{6}$/.test(d.textColor)) {
-        document.getElementById('textColor').value = d.textColor.toUpperCase();
-        document.getElementById('textColorPicker').value = d.textColor;
-      }
-      if (d.fontFamily) {
+    }
+
+    // Apply typography
+    if (styles.typography) {
+      const t = styles.typography;
+
+      if (t.fontFamily) {
         const fontSelect = document.getElementById('fontFamily');
-        const option = Array.from(fontSelect.options).find(o => o.value === d.fontFamily);
+        // Try exact match first, then case-insensitive match
+        let option = Array.from(fontSelect.options).find(o => o.value === t.fontFamily);
+        if (!option) {
+          option = Array.from(fontSelect.options).find(o =>
+            o.value.toLowerCase() === t.fontFamily.toLowerCase()
+          );
+        }
         if (option) {
-          fontSelect.value = d.fontFamily;
-          applyFontPreset(d.fontFamily);
+          fontSelect.value = option.value;
+          applyFontPreset(option.value);
+        } else {
+          console.warn('AI returned unknown font:', t.fontFamily);
         }
       }
-      if (typeof d.fontScale === 'number' && d.fontScale >= 0.5 && d.fontScale <= 1.5) {
-        document.getElementById('fontScale').value = d.fontScale;
+      if (typeof t.fontScale === 'number' && t.fontScale >= 0.5 && t.fontScale <= 1.5) {
+        document.getElementById('fontScale').value = t.fontScale;
       }
-      if (typeof d.letterSpacing === 'number' && d.letterSpacing >= -0.05 && d.letterSpacing <= 0.15) {
-        document.getElementById('letterSpacing').value = d.letterSpacing;
-      }
-    }
-
-    // Parse and store canvas drawing commands
-    if (styles.canvas) {
-      if (styles.canvas.background) {
-        const bgCmd = parseDrawingCode(styles.canvas.background, 'background');
-        if (bgCmd) canvasDecorations.push(bgCmd);
-      }
-      if (styles.canvas.text) {
-        const textCmd = parseDrawingCode(styles.canvas.text, 'text');
-        if (textCmd) canvasDecorations.push(textCmd);
-      }
-      if (styles.canvas.foreground) {
-        const fgCmd = parseDrawingCode(styles.canvas.foreground, 'foreground');
-        if (fgCmd) canvasDecorations.push(fgCmd);
+      if (typeof t.letterSpacing === 'number' && t.letterSpacing >= -0.05 && t.letterSpacing <= 0.15) {
+        document.getElementById('letterSpacing').value = t.letterSpacing;
       }
     }
 
-    // Re-render the ad with new settings and canvas commands
+    // Apply effects from library (selection-based, not code generation)
+    if (styles.effects) {
+      const e = styles.effects;
+
+      // Background effect
+      if (e.background && e.background !== 'none' && EFFECT_LIBRARY.background[e.background]) {
+        canvasDecorations.push({
+          layer: 'background',
+          draw: EFFECT_LIBRARY.background[e.background],
+          effectName: e.background
+        });
+      }
+
+      // Text effect
+      if (e.text && e.text !== 'none' && EFFECT_LIBRARY.text[e.text]) {
+        canvasDecorations.push({
+          layer: 'text',
+          draw: EFFECT_LIBRARY.text[e.text],
+          effectName: e.text
+        });
+      }
+
+      // Foreground effect
+      if (e.foreground && e.foreground !== 'none' && EFFECT_LIBRARY.foreground[e.foreground]) {
+        canvasDecorations.push({
+          layer: 'foreground',
+          draw: EFFECT_LIBRARY.foreground[e.foreground],
+          effectName: e.foreground
+        });
+      }
+    }
+
+    // Reset layer opacities to 100% for new style
+    resetLayerOpacities();
+
+    // Update layers card visibility
+    updateLayersCardVisibility();
+
+    // Re-render the ad with new settings and effects
     generateAd();
 
-    // Add to style history (after generateAd so canvas is rendered with new style)
-    await addStyleToHistory(prompt, styles.design, styles.canvas);
+    // Auto-save as a version
+    await saveCurrentVersion();
 
   } catch (error) {
     console.error('AI Style error:', error);
@@ -1998,9 +2890,15 @@ Return ONLY valid JSON:
 function clearCanvasStyle() {
   // Clear canvas drawing commands and re-render
   canvasDecorations = [];
-  activeStyleIndex = -1;
+  activeVersionIndex = -1;
+
+  // Reset layer opacities and hide layers card
+  resetLayerOpacities();
+  updateLayersCardVisibility();
+
   generateAd();
-  renderStyleHistory();
+  renderVersions();
+  saveAppStateDebounced();
 
   // Clear prompt
   const promptEl = document.getElementById('stylePrompt');
@@ -2011,10 +2909,14 @@ function resetBuilder() {
   // Clear localStorage for builder state
   localStorage.removeItem('ad_studio_state');
 
-  // Clear canvas commands and deselect style
+  // Clear canvas commands and deselect version
   canvasDecorations = [];
-  activeStyleIndex = -1;
-  renderStyleHistory();
+  activeVersionIndex = -1;
+  renderVersions();
+
+  // Reset layer opacities and hide layers card
+  resetLayerOpacities();
+  updateLayersCardVisibility();
 
   // Clear style prompt
   const promptEl = document.getElementById('stylePrompt');
@@ -2032,19 +2934,39 @@ function resetBuilder() {
 // ==========================================
 
 // Initialize
-const hasStoredState = loadAppState();
-if (!hasStoredState) {
-  loadDefaults();
-}
-updateApiKeyStatus();
-loadStyleHistory();
-renderStyleHistory();
-// Render size lists based on saved platform or default
-const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
-renderSizeList(sizePlatform);
-const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
-renderExportSizeList(exportPlatform);
-renderDataTable();
-renderVariationCards();
-updateExportSummary();
-document.fonts.ready.then(() => generateAd());
+(async function init() {
+  const hasStoredState = loadAppState();
+  if (!hasStoredState) {
+    loadDefaults();
+  }
+  updateApiKeyStatus();
+  loadVersions();
+  renderVersions();
+
+  // Restore active version (if any was saved) - must await to prevent race
+  let restoredVersion = false;
+  if (typeof window._pendingActiveVersionIndex === 'number' && savedVersions[window._pendingActiveVersionIndex]) {
+    await applyVersion(window._pendingActiveVersionIndex);
+    delete window._pendingActiveVersionIndex;
+    restoredVersion = true;
+  }
+
+  // Render size lists based on saved platform or default
+  const sizePlatform = document.getElementById('sizePlatform')?.value || 'reddit';
+  renderSizeList(sizePlatform);
+  const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
+  renderExportSizeList(exportPlatform);
+  renderDataTable();
+  renderVariationCards();
+  updateExportSummary();
+
+  // Set up new controls
+  setupElementColorPickers();
+  setupLayerControls();
+  updateLayersCardVisibility();
+
+  // Only call generateAd if we didn't already via applyVersion
+  if (!restoredVersion) {
+    document.fonts.ready.then(() => generateAd());
+  }
+})();

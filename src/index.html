@@ -33,7 +33,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500;1,700;1,900&family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Archivo+Black&family=Anton&family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Anton&family=Archivo+Black&family=Barlow+Condensed:wght@400;500;600;700;800&family=Bebas+Neue&family=Comfortaa:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Crimson+Text:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=Fjalla+One&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=Josefin+Sans:wght@400;500;600;700&family=Jost:wght@400;500;600;700;800&family=Lato:wght@400;700;900&family=Libre+Baskerville:wght@400;700&family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800;900&family=Noto+Sans:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700;800&family=Oswald:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=PT+Sans+Narrow:wght@400;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&family=Questrial&family=Quicksand:wght@400;500;600;700&family=Raleway:wght@400;500;600;700;800;900&family=Roboto:wght@400;500;700;900&family=Roboto+Condensed:wght@400;500;600;700&family=Rubik:wght@400;500;600;700;800&family=Russo+One&family=Saira+Condensed:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Teko:wght@400;500;600;700&family=Varela+Round&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -51,16 +51,18 @@
 
     <div class="toolbar-spacer"></div>
 
-    <button class="toolbar-btn" onclick="resetBuilder()">Reset</button>
-    <button class="toolbar-btn primary" id="exportBtn" onclick="downloadAd()">Export PNG</button>
+    <div class="toolbar-actions">
+      <button class="toolbar-btn" onclick="resetBuilder()">Reset</button>
+      <button class="toolbar-btn primary" id="exportBtn" onclick="downloadAd()">Export PNG</button>
+    </div>
   </div>
 
   <!-- Builder Tab -->
   <div id="builder-tab" class="tab-content active">
     <div class="main-layout">
-      <!-- Left Panel: Design Controls -->
+      <!-- Left Panel -->
       <aside class="panel">
-        <div class="panel-content">
+        <div class="panel-content panel-content-flex">
           <!-- Canvas Size -->
           <div class="section">
             <div class="section-header" onclick="toggleSection(this)">
@@ -94,7 +96,7 @@
           </div>
 
           <!-- AI Style -->
-          <div class="section">
+          <div class="section section-flex">
             <div class="section-header" onclick="toggleSection(this)">
               <span class="section-title">Style</span>
               <span class="section-hint">AI</span>
@@ -102,8 +104,8 @@
                 <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
               </div>
             </div>
-            <div class="section-body">
-              <textarea id="stylePrompt" class="style-prompt" placeholder="Describe a visual style...&#10;&#10;Examples:&#10;• Dark moody neon&#10;• Clean minimal white&#10;• Bold red and black&#10;• Soft pastel"></textarea>
+            <div class="section-body section-body-flex">
+              <textarea id="stylePrompt" class="style-prompt style-prompt-flex" placeholder="Describe a visual style...&#10;&#10;Examples:&#10;• Dark moody neon&#10;• Clean minimal white&#10;• Bold red and black&#10;• Soft pastel"></textarea>
               <div class="style-actions">
                 <button class="reset-btn" onclick="clearCanvasStyle()">
                   <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -113,6 +115,676 @@
                   <svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                   Apply
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layers (AI Canvas Effects) -->
+          <div class="element-card layers-card">
+            <div class="element-header">
+              <span class="element-title">Layers</span>
+              <span class="element-hint">AI</span>
+            </div>
+            <div class="layers-content">
+              <div class="layer-row">
+                <span class="layer-label">Background</span>
+                <input type="range" id="bgLayerOpacity" min="0" max="1" step="0.01" value="0.5">
+                <span class="slider-value" id="bgLayerOpacityVal">50%</span>
+              </div>
+              <div class="layer-row">
+                <span class="layer-label">Text</span>
+                <input type="range" id="textLayerOpacity" min="0" max="1" step="0.01" value="0.5">
+                <span class="slider-value" id="textLayerOpacityVal">50%</span>
+              </div>
+              <div class="layer-row">
+                <span class="layer-label">Foreground</span>
+                <input type="range" id="fgLayerOpacity" min="0" max="1" step="0.01" value="0.5">
+                <span class="slider-value" id="fgLayerOpacityVal">50%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Canvas Area -->
+      <main class="canvas-area">
+        <div class="canvas-container">
+          <canvas id="canvas"></canvas>
+        </div>
+        <div class="canvas-info" id="canvasInfo">1200 × 628 px</div>
+        <div class="style-history" id="styleHistory">
+          <!-- Saved versions strip, populated by JS -->
+        </div>
+      </main>
+
+      <!-- Right Panel -->
+      <aside class="panel right">
+        <div class="panel-content">
+          <!-- Intro Element -->
+          <div class="element-card">
+            <div class="element-header">
+              <span class="element-title">Intro</span>
+              <span class="element-hint">Whisper</span>
+              <span class="override-indicator" id="introOverrideIndicator" title="Has style overrides"></span>
+              <span class="element-header-spacer"></span>
+              <button class="element-settings-btn" onclick="toggleElementSettings(this)" title="Typography & Layout">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+                  <polyline points="6,9 12,15 18,9"/>
+                </svg>
+              </button>
+            </div>
+            <div class="element-content">
+              <input type="text" id="introText" class="text-input" placeholder="For ambitious founders...">
+            </div>
+            <div class="element-settings collapsed">
+              <div class="element-settings-inner">
+              <div class="settings-group">
+                <div class="settings-group-title">Typography</div>
+                <div class="prop-row">
+                  <span class="prop-label">Font</span>
+                  <select id="introFont" class="prop-value">
+                    <option value="">Inherit</option>
+                    <optgroup label="Bold & Impactful">
+                      <option value="Bebas Neue">Bebas Neue</option>
+                      <option value="Anton">Anton</option>
+                      <option value="Archivo Black">Archivo Black</option>
+                      <option value="Oswald">Oswald</option>
+                      <option value="Teko">Teko</option>
+                      <option value="Russo One">Russo One</option>
+                    </optgroup>
+                    <optgroup label="Modern & Clean">
+                      <option value="Inter">Inter</option>
+                      <option value="Space Grotesk">Space Grotesk</option>
+                      <option value="DM Sans">DM Sans</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="Sora">Sora</option>
+                      <option value="Manrope">Manrope</option>
+                      <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                    </optgroup>
+                    <optgroup label="Warm & Friendly">
+                      <option value="Poppins">Poppins</option>
+                      <option value="Nunito">Nunito</option>
+                      <option value="Quicksand">Quicksand</option>
+                      <option value="Rubik">Rubik</option>
+                      <option value="Comfortaa">Comfortaa</option>
+                      <option value="Varela Round">Varela Round</option>
+                    </optgroup>
+                    <optgroup label="Condensed & Efficient">
+                      <option value="Barlow Condensed">Barlow Condensed</option>
+                      <option value="Roboto Condensed">Roboto Condensed</option>
+                      <option value="PT Sans Narrow">PT Sans Narrow</option>
+                      <option value="Fjalla One">Fjalla One</option>
+                      <option value="Saira Condensed">Saira Condensed</option>
+                    </optgroup>
+                    <optgroup label="Classic & Universal">
+                      <option value="Roboto">Roboto</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                      <option value="Source Sans 3">Source Sans 3</option>
+                      <option value="Noto Sans">Noto Sans</option>
+                      <option value="IBM Plex Sans">IBM Plex Sans</option>
+                    </optgroup>
+                    <optgroup label="Premium & Refined">
+                      <option value="Playfair Display">Playfair Display</option>
+                      <option value="Cormorant Garamond">Cormorant Garamond</option>
+                      <option value="Libre Baskerville">Libre Baskerville</option>
+                      <option value="Crimson Text">Crimson Text</option>
+                      <option value="DM Serif Display">DM Serif Display</option>
+                    </optgroup>
+                    <optgroup label="Geometric & Structured">
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Raleway">Raleway</option>
+                      <option value="Josefin Sans">Josefin Sans</option>
+                      <option value="Questrial">Questrial</option>
+                      <option value="Jost">Jost</option>
+                      <option value="Albert Sans">Albert Sans</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="prop-row-2col">
+                  <select id="introWeight">
+                    <option value="400">Regular</option>
+                    <option value="500">Medium</option>
+                    <option value="600">SemiBold</option>
+                    <option value="700">Bold</option>
+                    <option value="800">ExtraBold</option>
+                  </select>
+                  <select id="introTransform">
+                    <option value="">Inherit</option>
+                    <option value="none">As typed</option>
+                    <option value="uppercase">UPPER</option>
+                    <option value="lowercase">lower</option>
+                    <option value="capitalize">Title</option>
+                  </select>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-label">Color</span>
+                  <div class="color-input-clearable">
+                    <div class="color-swatch-wrap empty" id="introColorWrap">
+                      <input type="color" id="introColorPicker" value="#ffffff">
+                    </div>
+                    <input type="text" id="introColor" class="color-hex" placeholder="Inherit">
+                    <button type="button" class="color-clear-btn" onclick="clearElementColor('intro')" title="Clear (inherit from global)">
+                      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Layout</div>
+                <div class="slider-row">
+                  <span class="prop-label">Size</span>
+                  <input type="range" id="introSize" min="0.02" max="0.12" step="0.002">
+                  <span class="slider-value" id="introSizeVal"></span>
+                </div>
+                <div class="slider-row">
+                  <span class="prop-label">Top</span>
+                  <input type="range" id="introMarginTop" min="0" max="0.1" step="0.005">
+                  <span class="slider-value" id="introMarginTopVal"></span>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Headline Element -->
+          <div class="element-card">
+            <div class="element-header">
+              <span class="element-title">Headline</span>
+              <span class="element-hint">Shout</span>
+              <span class="override-indicator" id="headlineOverrideIndicator" title="Has style overrides"></span>
+              <span class="element-header-spacer"></span>
+              <button class="element-settings-btn" onclick="toggleElementSettings(this)" title="Typography & Layout">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+                  <polyline points="6,9 12,15 18,9"/>
+                </svg>
+              </button>
+            </div>
+            <div class="element-content">
+              <input type="text" id="headlineText1" class="text-input" placeholder="Line 1">
+              <input type="text" id="headlineText2" class="text-input" placeholder="Line 2">
+            </div>
+            <div class="element-settings collapsed">
+              <div class="element-settings-inner">
+              <div class="settings-group">
+                <div class="settings-group-title">Typography</div>
+                <div class="prop-row">
+                  <span class="prop-label">Font</span>
+                  <select id="headlineFont" class="prop-value">
+                    <option value="">Inherit</option>
+                    <optgroup label="Bold & Impactful">
+                      <option value="Bebas Neue">Bebas Neue</option>
+                      <option value="Anton">Anton</option>
+                      <option value="Archivo Black">Archivo Black</option>
+                      <option value="Oswald">Oswald</option>
+                      <option value="Teko">Teko</option>
+                      <option value="Russo One">Russo One</option>
+                    </optgroup>
+                    <optgroup label="Modern & Clean">
+                      <option value="Inter">Inter</option>
+                      <option value="Space Grotesk">Space Grotesk</option>
+                      <option value="DM Sans">DM Sans</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="Sora">Sora</option>
+                      <option value="Manrope">Manrope</option>
+                      <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                    </optgroup>
+                    <optgroup label="Warm & Friendly">
+                      <option value="Poppins">Poppins</option>
+                      <option value="Nunito">Nunito</option>
+                      <option value="Quicksand">Quicksand</option>
+                      <option value="Rubik">Rubik</option>
+                      <option value="Comfortaa">Comfortaa</option>
+                      <option value="Varela Round">Varela Round</option>
+                    </optgroup>
+                    <optgroup label="Condensed & Efficient">
+                      <option value="Barlow Condensed">Barlow Condensed</option>
+                      <option value="Roboto Condensed">Roboto Condensed</option>
+                      <option value="PT Sans Narrow">PT Sans Narrow</option>
+                      <option value="Fjalla One">Fjalla One</option>
+                      <option value="Saira Condensed">Saira Condensed</option>
+                    </optgroup>
+                    <optgroup label="Classic & Universal">
+                      <option value="Roboto">Roboto</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                      <option value="Source Sans 3">Source Sans 3</option>
+                      <option value="Noto Sans">Noto Sans</option>
+                      <option value="IBM Plex Sans">IBM Plex Sans</option>
+                    </optgroup>
+                    <optgroup label="Premium & Refined">
+                      <option value="Playfair Display">Playfair Display</option>
+                      <option value="Cormorant Garamond">Cormorant Garamond</option>
+                      <option value="Libre Baskerville">Libre Baskerville</option>
+                      <option value="Crimson Text">Crimson Text</option>
+                      <option value="DM Serif Display">DM Serif Display</option>
+                    </optgroup>
+                    <optgroup label="Geometric & Structured">
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Raleway">Raleway</option>
+                      <option value="Josefin Sans">Josefin Sans</option>
+                      <option value="Questrial">Questrial</option>
+                      <option value="Jost">Jost</option>
+                      <option value="Albert Sans">Albert Sans</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="prop-row-2col">
+                  <select id="headlineWeight">
+                    <option value="400">Regular</option>
+                    <option value="500">Medium</option>
+                    <option value="600">SemiBold</option>
+                    <option value="700">Bold</option>
+                    <option value="800">ExtraBold</option>
+                    <option value="900">Black</option>
+                  </select>
+                  <select id="headlineTransform">
+                    <option value="">Inherit</option>
+                    <option value="none">As typed</option>
+                    <option value="uppercase">UPPER</option>
+                    <option value="lowercase">lower</option>
+                    <option value="capitalize">Title</option>
+                  </select>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-label">Color</span>
+                  <div class="color-input-clearable">
+                    <div class="color-swatch-wrap empty" id="headlineColorWrap">
+                      <input type="color" id="headlineColorPicker" value="#ffffff">
+                    </div>
+                    <input type="text" id="headlineColor" class="color-hex" placeholder="Inherit">
+                    <button type="button" class="color-clear-btn" onclick="clearElementColor('headline')" title="Clear (inherit from global)">
+                      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Layout</div>
+                <div class="slider-row">
+                  <span class="prop-label">Size</span>
+                  <input type="range" id="headlineSize" min="0.08" max="0.25" step="0.005">
+                  <span class="slider-value" id="headlineSizeVal"></span>
+                </div>
+                <div class="slider-row">
+                  <span class="prop-label">Leading</span>
+                  <input type="range" id="headlineLineHeight" min="0.8" max="1.5" step="0.01">
+                  <span class="slider-value" id="headlineLineHeightVal"></span>
+                </div>
+                <div class="slider-row">
+                  <span class="prop-label">Top</span>
+                  <input type="range" id="headlineMarginTop" min="0" max="0.1" step="0.005">
+                  <span class="slider-value" id="headlineMarginTopVal"></span>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Offer Element -->
+          <div class="element-card">
+            <div class="element-header">
+              <span class="element-title">Offer</span>
+              <span class="element-hint">Speak</span>
+              <span class="override-indicator" id="offerOverrideIndicator" title="Has style overrides"></span>
+              <span class="element-header-spacer"></span>
+              <button class="element-settings-btn" onclick="toggleElementSettings(this)" title="Typography & Layout">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+                  <polyline points="6,9 12,15 18,9"/>
+                </svg>
+              </button>
+            </div>
+            <div class="element-content">
+              <input type="text" id="offerText" class="text-input" placeholder="Start free today">
+            </div>
+            <div class="element-settings collapsed">
+              <div class="element-settings-inner">
+              <div class="settings-group">
+                <div class="settings-group-title">Typography</div>
+                <div class="prop-row">
+                  <span class="prop-label">Font</span>
+                  <select id="offerFont" class="prop-value">
+                    <option value="">Inherit</option>
+                    <optgroup label="Bold & Impactful">
+                      <option value="Bebas Neue">Bebas Neue</option>
+                      <option value="Anton">Anton</option>
+                      <option value="Archivo Black">Archivo Black</option>
+                      <option value="Oswald">Oswald</option>
+                      <option value="Teko">Teko</option>
+                      <option value="Russo One">Russo One</option>
+                    </optgroup>
+                    <optgroup label="Modern & Clean">
+                      <option value="Inter">Inter</option>
+                      <option value="Space Grotesk">Space Grotesk</option>
+                      <option value="DM Sans">DM Sans</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="Sora">Sora</option>
+                      <option value="Manrope">Manrope</option>
+                      <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                    </optgroup>
+                    <optgroup label="Warm & Friendly">
+                      <option value="Poppins">Poppins</option>
+                      <option value="Nunito">Nunito</option>
+                      <option value="Quicksand">Quicksand</option>
+                      <option value="Rubik">Rubik</option>
+                      <option value="Comfortaa">Comfortaa</option>
+                      <option value="Varela Round">Varela Round</option>
+                    </optgroup>
+                    <optgroup label="Condensed & Efficient">
+                      <option value="Barlow Condensed">Barlow Condensed</option>
+                      <option value="Roboto Condensed">Roboto Condensed</option>
+                      <option value="PT Sans Narrow">PT Sans Narrow</option>
+                      <option value="Fjalla One">Fjalla One</option>
+                      <option value="Saira Condensed">Saira Condensed</option>
+                    </optgroup>
+                    <optgroup label="Classic & Universal">
+                      <option value="Roboto">Roboto</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                      <option value="Source Sans 3">Source Sans 3</option>
+                      <option value="Noto Sans">Noto Sans</option>
+                      <option value="IBM Plex Sans">IBM Plex Sans</option>
+                    </optgroup>
+                    <optgroup label="Premium & Refined">
+                      <option value="Playfair Display">Playfair Display</option>
+                      <option value="Cormorant Garamond">Cormorant Garamond</option>
+                      <option value="Libre Baskerville">Libre Baskerville</option>
+                      <option value="Crimson Text">Crimson Text</option>
+                      <option value="DM Serif Display">DM Serif Display</option>
+                    </optgroup>
+                    <optgroup label="Geometric & Structured">
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Raleway">Raleway</option>
+                      <option value="Josefin Sans">Josefin Sans</option>
+                      <option value="Questrial">Questrial</option>
+                      <option value="Jost">Jost</option>
+                      <option value="Albert Sans">Albert Sans</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="prop-row-2col">
+                  <select id="offerWeight">
+                    <option value="400">Regular</option>
+                    <option value="500">Medium</option>
+                    <option value="600">SemiBold</option>
+                    <option value="700">Bold</option>
+                    <option value="800">ExtraBold</option>
+                    <option value="900">Black</option>
+                  </select>
+                  <select id="offerTransform">
+                    <option value="">Inherit</option>
+                    <option value="none">As typed</option>
+                    <option value="uppercase">UPPER</option>
+                    <option value="lowercase">lower</option>
+                    <option value="capitalize">Title</option>
+                  </select>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-label">Color</span>
+                  <div class="color-input-clearable">
+                    <div class="color-swatch-wrap empty" id="offerColorWrap">
+                      <input type="color" id="offerColorPicker" value="#ffffff">
+                    </div>
+                    <input type="text" id="offerColor" class="color-hex" placeholder="Inherit">
+                    <button type="button" class="color-clear-btn" onclick="clearElementColor('offer')" title="Clear (inherit from global)">
+                      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Layout</div>
+                <div class="slider-row">
+                  <span class="prop-label">Size</span>
+                  <input type="range" id="offerSize" min="0.04" max="0.18" step="0.005">
+                  <span class="slider-value" id="offerSizeVal"></span>
+                </div>
+                <div class="slider-row">
+                  <span class="prop-label">Top</span>
+                  <input type="range" id="offerMarginTop" min="0" max="0.25" step="0.005">
+                  <span class="slider-value" id="offerMarginTopVal"></span>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend Element -->
+          <div class="element-card">
+            <div class="element-header">
+              <span class="element-title">Legend</span>
+              <span class="element-hint">Murmur</span>
+              <span class="override-indicator" id="legendOverrideIndicator" title="Has style overrides"></span>
+              <span class="element-header-spacer"></span>
+              <button class="element-settings-btn" onclick="toggleElementSettings(this)" title="Typography & Layout">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+                  <polyline points="6,9 12,15 18,9"/>
+                </svg>
+              </button>
+            </div>
+            <div class="element-content">
+              <input type="text" id="legendText" class="text-input" placeholder="No credit card required">
+            </div>
+            <div class="element-settings collapsed">
+              <div class="element-settings-inner">
+              <div class="settings-group">
+                <div class="settings-group-title">Typography</div>
+                <div class="prop-row">
+                  <span class="prop-label">Font</span>
+                  <select id="legendFont" class="prop-value">
+                    <option value="">Inherit</option>
+                    <optgroup label="Bold & Impactful">
+                      <option value="Bebas Neue">Bebas Neue</option>
+                      <option value="Anton">Anton</option>
+                      <option value="Archivo Black">Archivo Black</option>
+                      <option value="Oswald">Oswald</option>
+                      <option value="Teko">Teko</option>
+                      <option value="Russo One">Russo One</option>
+                    </optgroup>
+                    <optgroup label="Modern & Clean">
+                      <option value="Inter">Inter</option>
+                      <option value="Space Grotesk">Space Grotesk</option>
+                      <option value="DM Sans">DM Sans</option>
+                      <option value="Outfit">Outfit</option>
+                      <option value="Sora">Sora</option>
+                      <option value="Manrope">Manrope</option>
+                      <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                    </optgroup>
+                    <optgroup label="Warm & Friendly">
+                      <option value="Poppins">Poppins</option>
+                      <option value="Nunito">Nunito</option>
+                      <option value="Quicksand">Quicksand</option>
+                      <option value="Rubik">Rubik</option>
+                      <option value="Comfortaa">Comfortaa</option>
+                      <option value="Varela Round">Varela Round</option>
+                    </optgroup>
+                    <optgroup label="Condensed & Efficient">
+                      <option value="Barlow Condensed">Barlow Condensed</option>
+                      <option value="Roboto Condensed">Roboto Condensed</option>
+                      <option value="PT Sans Narrow">PT Sans Narrow</option>
+                      <option value="Fjalla One">Fjalla One</option>
+                      <option value="Saira Condensed">Saira Condensed</option>
+                    </optgroup>
+                    <optgroup label="Classic & Universal">
+                      <option value="Roboto">Roboto</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                      <option value="Source Sans 3">Source Sans 3</option>
+                      <option value="Noto Sans">Noto Sans</option>
+                      <option value="IBM Plex Sans">IBM Plex Sans</option>
+                    </optgroup>
+                    <optgroup label="Premium & Refined">
+                      <option value="Playfair Display">Playfair Display</option>
+                      <option value="Cormorant Garamond">Cormorant Garamond</option>
+                      <option value="Libre Baskerville">Libre Baskerville</option>
+                      <option value="Crimson Text">Crimson Text</option>
+                      <option value="DM Serif Display">DM Serif Display</option>
+                    </optgroup>
+                    <optgroup label="Geometric & Structured">
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Raleway">Raleway</option>
+                      <option value="Josefin Sans">Josefin Sans</option>
+                      <option value="Questrial">Questrial</option>
+                      <option value="Jost">Jost</option>
+                      <option value="Albert Sans">Albert Sans</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="prop-row-2col">
+                  <select id="legendWeight">
+                    <option value="400">Regular</option>
+                    <option value="500">Medium</option>
+                    <option value="600">SemiBold</option>
+                    <option value="700">Bold</option>
+                  </select>
+                  <select id="legendTransform">
+                    <option value="">Inherit</option>
+                    <option value="none">As typed</option>
+                    <option value="uppercase">UPPER</option>
+                    <option value="lowercase">lower</option>
+                    <option value="capitalize">Title</option>
+                  </select>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-label">Color</span>
+                  <div class="color-input-clearable">
+                    <div class="color-swatch-wrap empty" id="legendColorWrap">
+                      <input type="color" id="legendColorPicker" value="#ffffff">
+                    </div>
+                    <input type="text" id="legendColor" class="color-hex" placeholder="Inherit">
+                    <button type="button" class="color-clear-btn" onclick="clearElementColor('legend')" title="Clear (inherit from global)">
+                      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Layout</div>
+                <div class="slider-row">
+                  <span class="prop-label">Size</span>
+                  <input type="range" id="legendSize" min="0.02" max="0.08" step="0.002">
+                  <span class="slider-value" id="legendSizeVal"></span>
+                </div>
+                <div class="slider-row">
+                  <span class="prop-label">Top</span>
+                  <input type="range" id="legendMarginTop" min="0" max="0.15" step="0.005">
+                  <span class="slider-value" id="legendMarginTopVal"></span>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layout -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Layout</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="prop-row">
+                <span class="prop-label">Scale</span>
+                <div class="slider-row prop-value">
+                  <input type="range" id="fontScale" min="0.5" max="1.5" step="0.01" value="1">
+                  <span class="slider-value" id="fontScaleVal">100%</span>
+                </div>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Y Offset</span>
+                <div class="slider-row prop-value">
+                  <input type="range" id="opticalYOffset" min="0" max="0.15" step="0.005">
+                  <span class="slider-value" id="opticalYOffsetVal"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typography (Global) -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Typography</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="prop-row">
+                <span class="prop-label">Font</span>
+                <select id="fontFamily" class="prop-value">
+                  <optgroup label="Bold & Impactful">
+                    <option value="Bebas Neue">Bebas Neue</option>
+                    <option value="Anton">Anton</option>
+                    <option value="Archivo Black">Archivo Black</option>
+                    <option value="Oswald">Oswald</option>
+                    <option value="Teko">Teko</option>
+                    <option value="Russo One">Russo One</option>
+                  </optgroup>
+                  <optgroup label="Modern & Clean">
+                    <option value="Inter" selected>Inter</option>
+                    <option value="Space Grotesk">Space Grotesk</option>
+                    <option value="DM Sans">DM Sans</option>
+                    <option value="Outfit">Outfit</option>
+                    <option value="Sora">Sora</option>
+                    <option value="Manrope">Manrope</option>
+                    <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                  </optgroup>
+                  <optgroup label="Warm & Friendly">
+                    <option value="Poppins">Poppins</option>
+                    <option value="Nunito">Nunito</option>
+                    <option value="Quicksand">Quicksand</option>
+                    <option value="Rubik">Rubik</option>
+                    <option value="Comfortaa">Comfortaa</option>
+                    <option value="Varela Round">Varela Round</option>
+                  </optgroup>
+                  <optgroup label="Condensed & Efficient">
+                    <option value="Barlow Condensed">Barlow Condensed</option>
+                    <option value="Roboto Condensed">Roboto Condensed</option>
+                    <option value="PT Sans Narrow">PT Sans Narrow</option>
+                    <option value="Fjalla One">Fjalla One</option>
+                    <option value="Saira Condensed">Saira Condensed</option>
+                  </optgroup>
+                  <optgroup label="Classic & Universal">
+                    <option value="Roboto">Roboto</option>
+                    <option value="Open Sans">Open Sans</option>
+                    <option value="Lato">Lato</option>
+                    <option value="Source Sans 3">Source Sans 3</option>
+                    <option value="Noto Sans">Noto Sans</option>
+                    <option value="IBM Plex Sans">IBM Plex Sans</option>
+                  </optgroup>
+                  <optgroup label="Premium & Refined">
+                    <option value="Playfair Display">Playfair Display</option>
+                    <option value="Cormorant Garamond">Cormorant Garamond</option>
+                    <option value="Libre Baskerville">Libre Baskerville</option>
+                    <option value="Crimson Text">Crimson Text</option>
+                    <option value="DM Serif Display">DM Serif Display</option>
+                  </optgroup>
+                  <optgroup label="Geometric & Structured">
+                    <option value="Montserrat">Montserrat</option>
+                    <option value="Raleway">Raleway</option>
+                    <option value="Josefin Sans">Josefin Sans</option>
+                    <option value="Questrial">Questrial</option>
+                    <option value="Jost">Jost</option>
+                    <option value="Albert Sans">Albert Sans</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Tracking</span>
+                <div class="slider-row prop-value">
+                  <input type="range" id="letterSpacing" min="-0.05" max="0.15" step="0.005">
+                  <span class="slider-value" id="letterSpacingVal">0%</span>
+                </div>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">Case</span>
+                <select id="textTransform" class="prop-value">
+                  <option value="none">As typed</option>
+                  <option value="uppercase">UPPERCASE</option>
+                  <option value="lowercase">lowercase</option>
+                  <option value="capitalize">Title Case</option>
+                </select>
               </div>
             </div>
           </div>
@@ -142,256 +814,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Typography -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Typography</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <div class="prop-row">
-                <span class="prop-label">Font</span>
-                <select id="fontFamily" class="prop-value">
-                  <option value="Inter">Inter</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="Space Grotesk">Space Grotesk</option>
-                  <option value="DM Sans">DM Sans</option>
-                  <option value="Poppins">Poppins</option>
-                  <option value="Bebas Neue">Bebas Neue</option>
-                  <option value="Oswald">Oswald</option>
-                  <option value="Anton">Anton</option>
-                  <option value="Barlow Condensed">Barlow Condensed</option>
-                  <option value="Archivo Black">Archivo Black</option>
-                  <option value="Roboto">Roboto</option>
-                  <option value="Open Sans">Open Sans</option>
-                  <option value="Lato">Lato</option>
-                  <option value="Helvetica">Helvetica</option>
-                </select>
-              </div>
-              <div class="prop-row">
-                <span class="prop-label">Scale</span>
-                <div class="slider-row prop-value">
-                  <input type="range" id="fontScale" min="0.5" max="1.5" step="0.01" value="1">
-                  <span class="slider-value" id="fontScaleVal">100%</span>
-                </div>
-              </div>
-              <div class="prop-row">
-                <span class="prop-label">Tracking</span>
-                <div class="slider-row prop-value">
-                  <input type="range" id="letterSpacing" min="-0.05" max="0.15" step="0.005">
-                  <span class="slider-value" id="letterSpacingVal">0%</span>
-                </div>
-              </div>
-              <div class="prop-row">
-                <span class="prop-label">Y Offset</span>
-                <div class="slider-row prop-value">
-                  <input type="range" id="opticalYOffset" min="0" max="0.15" step="0.005">
-                  <span class="slider-value" id="opticalYOffsetVal"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Config Code (Dev Tools) -->
-          <div class="section collapsed">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Config</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <pre id="configCode" class="config-code"></pre>
-              <div class="config-actions">
-                <button class="reset-btn" onclick="copyConfigCode()">
-                  <svg class="icon-sm" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  Copy
-                </button>
-                <button class="reset-btn" onclick="resetDefaults()">
-                  <svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Canvas Area -->
-      <main class="canvas-area">
-        <div class="canvas-container">
-          <canvas id="canvas"></canvas>
-        </div>
-        <div class="canvas-info" id="canvasInfo">1200 × 628 px</div>
-        <div class="style-history" id="styleHistory">
-          <!-- Thumbnails populated by JS -->
-        </div>
-      </main>
-
-      <!-- Right Panel: Content -->
-      <aside class="panel right">
-        <div class="panel-content">
-          <!-- Intro -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Intro</span>
-              <span class="section-hint">Qualifier</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <input type="text" id="introText" class="text-input">
-              <div class="prop-row-2col">
-                <select id="introWeight">
-                  <option value="400">Regular</option>
-                  <option value="500">Medium</option>
-                  <option value="600">SemiBold</option>
-                  <option value="700">Bold</option>
-                  <option value="800">ExtraBold</option>
-                </select>
-                <select id="introTransform">
-                  <option value="none">As typed</option>
-                  <option value="uppercase">UPPER</option>
-                  <option value="capitalize">Title</option>
-                </select>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Top</span>
-                <input type="range" id="introMarginTop" min="0" max="0.1" step="0.005">
-                <span class="slider-value" id="introMarginTopVal"></span>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Size</span>
-                <input type="range" id="introSize" min="0.02" max="0.12" step="0.002">
-                <span class="slider-value" id="introSizeVal"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Headline -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Headline</span>
-              <span class="section-hint">Primary</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <input type="text" id="headlineText1" class="text-input" placeholder="Line 1">
-              <input type="text" id="headlineText2" class="text-input" placeholder="Line 2">
-              <div class="prop-row-2col">
-                <select id="headlineWeight">
-                  <option value="400">Regular</option>
-                  <option value="500">Medium</option>
-                  <option value="600">SemiBold</option>
-                  <option value="700">Bold</option>
-                  <option value="800">ExtraBold</option>
-                  <option value="900">Black</option>
-                </select>
-                <select id="headlineTransform">
-                  <option value="none">As typed</option>
-                  <option value="uppercase">UPPER</option>
-                  <option value="capitalize">Title</option>
-                </select>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Top</span>
-                <input type="range" id="headlineMarginTop" min="0" max="0.1" step="0.005">
-                <span class="slider-value" id="headlineMarginTopVal"></span>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Size</span>
-                <input type="range" id="headlineSize" min="0.08" max="0.25" step="0.005">
-                <span class="slider-value" id="headlineSizeVal"></span>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Leading</span>
-                <input type="range" id="headlineLineHeight" min="0.8" max="1.5" step="0.01">
-                <span class="slider-value" id="headlineLineHeightVal"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Offer -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Offer</span>
-              <span class="section-hint">CTA</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <input type="text" id="offerText" class="text-input">
-              <div class="prop-row-2col">
-                <select id="offerWeight">
-                  <option value="400">Regular</option>
-                  <option value="500">Medium</option>
-                  <option value="600">SemiBold</option>
-                  <option value="700">Bold</option>
-                  <option value="800">ExtraBold</option>
-                  <option value="900">Black</option>
-                </select>
-                <select id="offerTransform">
-                  <option value="none">As typed</option>
-                  <option value="uppercase">UPPER</option>
-                  <option value="capitalize">Title</option>
-                </select>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Top</span>
-                <input type="range" id="offerMarginTop" min="0" max="0.25" step="0.005">
-                <span class="slider-value" id="offerMarginTopVal"></span>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Size</span>
-                <input type="range" id="offerSize" min="0.04" max="0.18" step="0.005">
-                <span class="slider-value" id="offerSizeVal"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Legend -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection(this)">
-              <span class="section-title">Legend</span>
-              <span class="section-hint">Fine print</span>
-              <div class="section-toggle">
-                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
-              </div>
-            </div>
-            <div class="section-body">
-              <input type="text" id="legendText" class="text-input">
-              <div class="prop-row-2col">
-                <select id="legendWeight">
-                  <option value="400">Regular</option>
-                  <option value="500">Medium</option>
-                  <option value="600">SemiBold</option>
-                  <option value="700">Bold</option>
-                </select>
-                <select id="legendTransform">
-                  <option value="none">As typed</option>
-                  <option value="uppercase">UPPER</option>
-                  <option value="capitalize">Title</option>
-                </select>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Top</span>
-                <input type="range" id="legendMarginTop" min="0" max="0.15" step="0.005">
-                <span class="slider-value" id="legendMarginTopVal"></span>
-              </div>
-              <div class="slider-row">
-                <span class="prop-label">Size</span>
-                <input type="range" id="legendSize" min="0.02" max="0.08" step="0.002">
-                <span class="slider-value" id="legendSizeVal"></span>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
     </div>
@@ -402,6 +824,10 @@
     <div class="main-layout">
       <!-- Left Panel: AI Generation -->
       <aside class="panel">
+        <div class="panel-header">
+          <span class="panel-header-title">Generate</span>
+          <span class="panel-header-hint ai-hint">AI</span>
+        </div>
         <div class="panel-content">
           <!-- API Key -->
           <div class="section">
@@ -503,16 +929,29 @@
             </div>
           </div>
           <div class="spreadsheet-footer">
+            <button class="add-row-btn" onclick="exportDataCSV()">
+              <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export
+            </button>
+            <button class="add-row-btn" onclick="importDataCSV()">
+              <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Import
+            </button>
             <button class="add-row-btn" onclick="addDataRow()">
               <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Row
             </button>
+            <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" onchange="handleCSVImport(event)">
           </div>
         </div>
       </main>
 
       <!-- Right Panel: System Prompt -->
       <aside class="panel right">
+        <div class="panel-header">
+          <span class="panel-header-title">System</span>
+          <span class="panel-header-hint">Prompt</span>
+        </div>
         <div class="panel-content">
           <div class="section grow">
             <div class="section-header" onclick="toggleSection(this)">
@@ -539,6 +978,10 @@
     <div class="main-layout">
       <!-- Left Panel: Variations -->
       <aside class="panel">
+        <div class="panel-header">
+          <span class="panel-header-title">Select</span>
+          <span class="panel-header-hint">Variations</span>
+        </div>
         <div class="panel-content">
           <!-- Variation Selection -->
           <div class="section variations-section">
@@ -564,12 +1007,16 @@
         </div>
         <div class="canvas-info" id="previewInfo">Select a variation to preview</div>
         <div class="style-history" id="styleHistoryExport">
-          <!-- Mirrors styleHistory, populated by JS -->
+          <!-- Saved versions strip, populated by JS -->
         </div>
       </main>
 
       <!-- Right Panel: Export Settings -->
       <aside class="panel right">
+        <div class="panel-header">
+          <span class="panel-header-title">Export</span>
+          <span class="panel-header-hint">Settings</span>
+        </div>
         <div class="panel-content">
           <!-- Size Selection -->
           <div class="section">
