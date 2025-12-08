@@ -1817,7 +1817,8 @@ document.getElementById('exportPlatform')?.addEventListener('change', (e) => {
 function updateExportSummary() {
   const selectedVariations = dataRows.filter(r => r.selected).length;
   const selectedSizesCount = selectedExportSizes.size;
-  const totalFiles = selectedVariations * selectedSizesCount;
+  // Each variation-size combination exports 2 files (1x and 2x)
+  const totalFiles = selectedVariations * selectedSizesCount * 2;
 
   document.getElementById('selectedVariations').textContent = selectedVariations;
   document.getElementById('selectedSizes').textContent = selectedSizesCount;
@@ -1918,10 +1919,10 @@ async function generateWithAI() {
     return;
   }
 
-  // Use shared product brief from Style section
+  // Use shared product brief from Product section
   const prompt = document.getElementById('productBrief')?.value?.trim();
   if (!prompt) {
-    alert('Please describe your product in Builder > Style first.');
+    alert('Please describe your product in Builder > Product first.');
     return;
   }
 
@@ -2054,15 +2055,15 @@ async function exportAllAds() {
       const varNum = String(i + 1).padStart(2, '0');
 
       for (const [width, height] of selectedSizes) {
-        // Export 1x version
+        // Export 1x version (root folder)
         const pngData1x = await renderAdToDataUrl(row, template, width, height, 1);
         const base641x = pngData1x.split(',')[1];
-        zip.file(`${varNum}-${width}x${height}@1x.png`, base641x, { base64: true });
+        zip.file(`${varNum}-${width}x${height}.png`, base641x, { base64: true });
 
-        // Export 2x version
+        // Export 2x version (@2x folder)
         const pngData2x = await renderAdToDataUrl(row, template, width, height, 2);
         const base642x = pngData2x.split(',')[1];
-        zip.file(`${varNum}-${width}x${height}@2x.png`, base642x, { base64: true });
+        zip.file(`@2x/${varNum}-${width}x${height}.png`, base642x, { base64: true });
       }
     }
 
