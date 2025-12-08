@@ -1065,17 +1065,46 @@ function embedPngDpi(dataUrl, dpi) {
   return dataUrl;
 }
 
-function downloadAd() {
+async function downloadAd() {
   const w = parseInt(document.getElementById('width')?.value) || 1200;
   const h = parseInt(document.getElementById('height')?.value) || 628;
 
-  const effectiveDpi = 72 * dpr;
-  const pngData = embedPngDpi(exportCanvas.toDataURL('image/png'), effectiveDpi);
+  const template = getTemplateFromUI();
+  const content = getContentFromUI();
 
-  const link = document.createElement('a');
-  link.download = `ad-${w}x${h}.png`;
-  link.href = pngData;
-  link.click();
+  // Create 1x version
+  const canvas1x = document.createElement('canvas');
+  canvas1x.width = w;
+  canvas1x.height = h;
+  const ctx1x = canvas1x.getContext('2d');
+  ctx1x.imageSmoothingEnabled = true;
+  ctx1x.imageSmoothingQuality = 'high';
+  renderAdToCanvas(ctx1x, w, h, template, content, 1);
+  const pngData1x = embedPngDpi(canvas1x.toDataURL('image/png'), 72);
+
+  // Create 2x version
+  const canvas2x = document.createElement('canvas');
+  canvas2x.width = w * 2;
+  canvas2x.height = h * 2;
+  const ctx2x = canvas2x.getContext('2d');
+  ctx2x.imageSmoothingEnabled = true;
+  ctx2x.imageSmoothingQuality = 'high';
+  renderAdToCanvas(ctx2x, w, h, template, content, 2);
+  const pngData2x = embedPngDpi(canvas2x.toDataURL('image/png'), 144);
+
+  // Download both files
+  const link1x = document.createElement('a');
+  link1x.download = `ad-${w}x${h}@1x.png`;
+  link1x.href = pngData1x;
+  link1x.click();
+
+  // Small delay to ensure both downloads trigger
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const link2x = document.createElement('a');
+  link2x.download = `ad-${w}x${h}@2x.png`;
+  link2x.href = pngData2x;
+  link2x.click();
 }
 
 function resetDefaults() {
@@ -1092,7 +1121,8 @@ function resetDefaults() {
   document.getElementById('productBrief').value = '';
   document.getElementById('productBriefData').value = '';
   document.getElementById('stylePrompt').value = '';
-  document.getElementById('updateCopyCheckbox').checked = true;
+  // Empty brief = unchecked and disabled (consistent with updateProductCheckboxState)
+  document.getElementById('updateCopyCheckbox').checked = false;
   document.getElementById('updateCopyCheckbox').disabled = true;
   document.getElementById('aiVariationCount').value = '8';
   renderSizeList('reddit');
@@ -2024,9 +2054,15 @@ async function exportAllAds() {
       const varNum = String(i + 1).padStart(2, '0');
 
       for (const [width, height] of selectedSizes) {
-        const pngData = await renderAdToDataUrl(row, template, width, height);
-        const base64 = pngData.split(',')[1];
-        zip.file(`${varNum}-${width}x${height}.png`, base64, { base64: true });
+        // Export 1x version
+        const pngData1x = await renderAdToDataUrl(row, template, width, height, 1);
+        const base641x = pngData1x.split(',')[1];
+        zip.file(`${varNum}-${width}x${height}@1x.png`, base641x, { base64: true });
+
+        // Export 2x version
+        const pngData2x = await renderAdToDataUrl(row, template, width, height, 2);
+        const base642x = pngData2x.split(',')[1];
+        zip.file(`${varNum}-${width}x${height}@2x.png`, base642x, { base64: true });
       }
     }
 
@@ -2044,10 +2080,10 @@ async function exportAllAds() {
   }
 }
 
-async function renderAdToDataUrl(row, template, width, height) {
+async function renderAdToDataUrl(row, template, width, height, scale = 1) {
   const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = width;
-  tempCanvas.height = height;
+  tempCanvas.width = width * scale;
+  tempCanvas.height = height * scale;
   const tempCtx = tempCanvas.getContext('2d');
 
   tempCtx.imageSmoothingEnabled = true;
@@ -2061,9 +2097,9 @@ async function renderAdToDataUrl(row, template, width, height) {
     legend: row.legend
   };
 
-  renderAdToCanvas(tempCtx, width, height, template, content, 1);
+  renderAdToCanvas(tempCtx, width, height, template, content, scale);
 
-  const effectiveDpi = 72 * dpr;
+  const effectiveDpi = 72 * scale;
   return embedPngDpi(tempCanvas.toDataURL('image/png'), effectiveDpi);
 }
 
