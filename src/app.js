@@ -2562,6 +2562,11 @@ async function handleTemplateImport(event) {
 
   const reader = new FileReader();
   reader.onload = async (e) => {
+    // Save current state before any modifications
+    const originalVersion = getCurrentVersion();
+    const originalDecorations = [...canvasDecorations];
+    const originalIndex = activeVersionIndex;
+
     try {
       const data = JSON.parse(e.target.result);
 
@@ -2573,11 +2578,6 @@ async function handleTemplateImport(event) {
         return;
       }
 
-      // Save current state to restore after thumbnail generation
-      const originalVersion = getCurrentVersion();
-      const originalDecorations = [...canvasDecorations];
-      const originalIndex = activeVersionIndex;
-
       // Apply the imported template settings to generate thumbnail
       await applyVersionData(template);
       const thumbnail = await generateStyleThumbnail();
@@ -2585,7 +2585,6 @@ async function handleTemplateImport(event) {
       // Restore original state
       await applyVersionData(originalVersion);
       canvasDecorations = originalDecorations;
-      activeVersionIndex = originalIndex;
 
       // Add imported template
       savedVersions.unshift({
@@ -2600,10 +2599,20 @@ async function handleTemplateImport(event) {
         savedVersions = savedVersions.slice(0, MAX_VERSIONS);
       }
 
+      // Adjust activeVersionIndex to account for the unshift
+      // (all existing indices shift by 1)
+      activeVersionIndex = originalIndex >= 0 ? originalIndex + 1 : originalIndex;
+
       persistVersions();
       renderVersions();
       generateAd(); // Restore display
     } catch (err) {
+      // Restore original state on any error
+      await applyVersionData(originalVersion);
+      canvasDecorations = originalDecorations;
+      activeVersionIndex = originalIndex;
+      generateAd();
+
       console.error('Template import error:', err);
       alert('Failed to import template: ' + err.message);
     }
