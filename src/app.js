@@ -536,7 +536,8 @@ const SIZE_PRESETS = {
   reddit: [
     { w: 1200, h: 628, label: 'Feed', ratio: '1.91:1' },
     { w: 1080, h: 1080, label: 'Square', ratio: '1:1' },
-    { w: 1200, h: 675, label: 'Card', ratio: '16:9' }
+    { w: 1200, h: 675, label: 'Card', ratio: '16:9' },
+    { w: 1440, h: 1080, label: 'Landscape', ratio: '4:3' }
   ],
   facebook: [
     { w: 1200, h: 628, label: 'Feed', ratio: '1.91:1' },
@@ -2352,6 +2353,7 @@ async function applyVersion(index) {
   await generateAd();
   renderPreview();
   renderVersions();
+  updateTemplateActionButtons();
   saveAppStateDebounced();
 }
 
@@ -2489,20 +2491,226 @@ function deleteVersion(index, event) {
   saveAppStateDebounced();
 }
 
-// Render the versions strip with save button
+// Export a single template as JSON
+function exportTemplate(index, event) {
+  if (event) event.stopPropagation();
+
+  const version = savedVersions[index];
+  if (!version) return;
+
+  // Export without thumbnail (it's large and can be regenerated)
+  const { thumbnail, ...template } = version;
+
+  const exportData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    template: template
+  };
+
+  const json = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+
+  // Use style prompt for filename if available
+  const name = (version.stylePrompt || 'template').slice(0, 30).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  a.download = `ad-template-${name}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Export the currently selected template
+function exportCurrentTemplate() {
+  if (activeVersionIndex >= 0 && savedVersions[activeVersionIndex]) {
+    exportTemplate(activeVersionIndex);
+  }
+}
+
+// Delete the currently selected template
+function deleteCurrentTemplate() {
+  if (activeVersionIndex >= 0 && savedVersions[activeVersionIndex]) {
+    if (!confirm('Delete this template?')) return;
+
+    savedVersions.splice(activeVersionIndex, 1);
+    activeVersionIndex = -1;
+    persistVersions();
+    renderVersions();
+    updateTemplateActionButtons();
+    saveAppStateDebounced();
+  }
+}
+
+// Update template action button states based on selection
+function updateTemplateActionButtons() {
+  const hasSelection = activeVersionIndex >= 0 && savedVersions[activeVersionIndex];
+  const exportBtn = document.getElementById('exportTemplateBtn');
+  const deleteBtn = document.getElementById('deleteTemplateBtn');
+
+  if (exportBtn) exportBtn.disabled = !hasSelection;
+  if (deleteBtn) deleteBtn.disabled = !hasSelection;
+}
+
+// Import template from JSON
+function importTemplate() {
+  document.getElementById('templateFileInput').click();
+}
+
+async function handleTemplateImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    // Save current state before any modifications
+    const originalVersion = getCurrentVersion();
+    const originalDecorations = [...canvasDecorations];
+    const originalIndex = activeVersionIndex;
+
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Support both single template and legacy multi-template format
+      const template = data.template || (data.templates && data.templates[0]);
+
+      if (!template) {
+        alert('Invalid template file format');
+        return;
+      }
+
+      // Apply the imported template settings to generate thumbnail
+      await applyVersionData(template);
+      const thumbnail = await generateStyleThumbnail();
+
+      // Restore original state
+      await applyVersionData(originalVersion);
+      canvasDecorations = originalDecorations;
+
+      // Add imported template
+      savedVersions.unshift({
+        ...template,
+        id: Date.now(),
+        timestamp: Date.now(),
+        thumbnail
+      });
+
+      // Limit to max
+      if (savedVersions.length > MAX_VERSIONS) {
+        savedVersions = savedVersions.slice(0, MAX_VERSIONS);
+      }
+
+      // Adjust activeVersionIndex to account for the unshift
+      // (all existing indices shift by 1)
+      activeVersionIndex = originalIndex >= 0 ? originalIndex + 1 : originalIndex;
+
+      persistVersions();
+      renderVersions();
+      generateAd(); // Restore display
+    } catch (err) {
+      // Restore original state on any error
+      await applyVersionData(originalVersion);
+      canvasDecorations = originalDecorations;
+      activeVersionIndex = originalIndex;
+      generateAd();
+
+      console.error('Template import error:', err);
+      alert('Failed to import template: ' + err.message);
+    }
+  };
+
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// Apply version data without updating activeVersionIndex (for import thumbnail generation)
+async function applyVersionData(version) {
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+
+  // Canvas size
+  setVal('width', version.width);
+  setVal('height', version.height);
+
+  // Colors
+  setVal('bgColor', version.bgColor);
+  setVal('bgColorPicker', version.bgColor);
+  setVal('textColor', version.textColor);
+  setVal('textColorPicker', version.textColor);
+
+  // Global Typography
+  setVal('fontFamily', version.fontFamily);
+  setVal('fontScale', version.fontScale);
+  setVal('letterSpacing', version.letterSpacing);
+  setVal('textTransform', version.textTransform);
+
+  // Layout
+  setVal('opticalYOffset', version.opticalYOffset);
+
+  // Per-element settings
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    if (version[el]) {
+      setVal(`${el}Font`, version[el].font);
+      setVal(`${el}Weight`, version[el].weight);
+      setVal(`${el}Transform`, version[el].transform);
+      setVal(`${el}Color`, version[el].color);
+      setVal(`${el}Size`, version[el].size);
+      setVal(`${el}MarginTop`, version[el].marginTop);
+      if (el === 'headline') {
+        setVal('headlineLineHeight', version[el].lineHeight);
+      }
+    }
+  });
+
+  // Layer opacities
+  if (version.layers) {
+    setVal('bgLayerOpacity', version.layers.background);
+    setVal('textLayerOpacity', version.layers.text);
+    setVal('fgLayerOpacity', version.layers.foreground);
+  }
+
+  // Canvas effects
+  canvasDecorations = [];
+  if (version.canvas) {
+    if (version.canvas.background && EFFECT_LIBRARY.background[version.canvas.background]) {
+      canvasDecorations.push({
+        layer: 'background',
+        draw: EFFECT_LIBRARY.background[version.canvas.background],
+        effectName: version.canvas.background
+      });
+    }
+    if (version.canvas.text && EFFECT_LIBRARY.text[version.canvas.text]) {
+      canvasDecorations.push({
+        layer: 'text',
+        draw: EFFECT_LIBRARY.text[version.canvas.text],
+        effectName: version.canvas.text
+      });
+    }
+    if (version.canvas.foreground && EFFECT_LIBRARY.foreground[version.canvas.foreground]) {
+      canvasDecorations.push({
+        layer: 'foreground',
+        draw: EFFECT_LIBRARY.foreground[version.canvas.foreground],
+        effectName: version.canvas.foreground
+      });
+    }
+  }
+
+  // Style prompt
+  setVal('stylePrompt', version.stylePrompt || '');
+}
+
+// Render the versions strip
 function renderVersions() {
   const containers = [
     document.getElementById('styleHistory'),
     document.getElementById('styleHistoryExport')
   ];
 
-  // Save button (only in builder, not export)
+  // Save button (+ icon)
   const saveBtn = `
-    <button class="version-save-btn" onclick="saveCurrentVersion()" title="Save current design as a version">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="12" y1="5" x2="12" y2="19"/>
-        <line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
+    <button class="version-save-btn" onclick="saveCurrentVersion()" title="Save current style">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
   `;
 
@@ -2511,20 +2719,16 @@ function renderVersions() {
          onclick="applyVersion(${index})"
          title="${escapeHtml(version.stylePrompt || 'Saved version')}">
       <img src="${escapeHtml(version.thumbnail || '')}" alt="Version ${index + 1}">
-      <button class="style-thumb-delete" onclick="deleteVersion(${index}, event)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
     </div>
   `).join('');
 
-  containers.forEach((container, i) => {
+  containers.forEach((container) => {
     if (container) {
-      // Only show save button in builder (first container)
-      container.innerHTML = (i === 0 ? saveBtn : '') + thumbs;
+      container.innerHTML = saveBtn + thumbs;
     }
   });
+
+  updateTemplateActionButtons();
 }
 
 // ==========================================

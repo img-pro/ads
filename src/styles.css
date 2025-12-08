@@ -865,83 +865,66 @@ canvas {
     inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Delete button - positioned outside the thumb bounds */
-.style-thumb-delete {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 18px;
-  height: 18px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  color: var(--text-tertiary);
-  cursor: pointer;
+/* Template Secondary Actions (Export/Delete row) */
+.template-secondary-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: scale(0.8);
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast),
-    background var(--transition-fast),
-    color var(--transition-fast);
-  z-index: 2;
+  gap: 8px;
 }
 
-.style-thumb:hover .style-thumb-delete {
-  opacity: 1;
-  transform: scale(1);
+.template-secondary-actions .reset-btn {
+  flex: 1;
 }
 
-.style-thumb-delete:hover {
-  background: var(--error);
+/* Disabled state for reset-btn */
+.reset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Danger variant for reset-btn */
+.reset-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
   border-color: var(--error);
-  color: white;
+  color: var(--error);
 }
 
-.style-thumb-delete svg {
-  width: 10px;
-  height: 10px;
-}
-
-/* Version Save Button (+) */
+/* Version Save Button (+ in thumbnail strip) */
 .version-save-btn {
   flex-shrink: 0;
-  width: 48px;
+  width: 64px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: var(--bg-tertiary);
-  border: 1px dashed var(--border-light);
   cursor: pointer;
+  border: 2px dashed var(--border-light);
+  background: transparent;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-tertiary);
-  transition: all var(--transition-fast);
+  color: var(--text-muted);
 }
 
 .version-save-btn:hover {
-  background: var(--accent-subtle);
   border-color: var(--accent);
   border-style: solid;
+  background: var(--accent-subtle);
   color: var(--accent);
-  transform: translateY(-2px);
 }
 
 .version-save-btn:active {
-  transform: translateY(0);
+  transform: scale(0.96);
 }
 
 .version-save-btn svg {
   width: 16px;
   height: 16px;
-}
-
-/* Show style history container when it has the save button (always visible) */
-.style-history:has(.version-save-btn) {
-  display: flex;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
 }
 
 /* ==========================================
