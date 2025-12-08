@@ -814,6 +814,32 @@
               </div>
             </div>
           </div>
+
+          <!-- Template -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <span class="section-title">Template</span>
+              <div class="section-toggle">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6,9 12,15 18,9"/></svg>
+              </div>
+            </div>
+            <div class="section-body">
+              <button class="reset-btn" onclick="importTemplate()">
+                <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import Template
+              </button>
+              <div class="template-secondary-actions">
+                <button class="reset-btn" onclick="exportCurrentTemplate()" id="exportTemplateBtn" disabled>
+                  <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Export
+                </button>
+                <button class="reset-btn danger" onclick="deleteCurrentTemplate()" id="deleteTemplateBtn" disabled>
+                  <svg class="icon-sm" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </div>
@@ -942,6 +968,7 @@
               Add Row
             </button>
             <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" onchange="handleCSVImport(event)">
+            <input type="file" id="templateFileInput" accept=".json" style="display:none" onchange="handleTemplateImport(event)">
           </div>
         </div>
       </main>
