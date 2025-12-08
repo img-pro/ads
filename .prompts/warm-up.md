@@ -18,11 +18,11 @@ This is a single-repo, zero-build browser application. No npm, no bundler - just
 
 Ad Studio is a browser-based ad generator for creating text-on-solid-background advertisements. The core workflow is:
 
-1. **Design** - Configure typography, colors, and layout in the Builder tab
+1. **Design** - Configure typography, colors, layout, and AI-generated visual effects in the Builder tab
 2. **Vary** - Create multiple copy variations manually or via AI generation
 3. **Export** - Batch export all variations × sizes as a ZIP of PNGs
 
-The tool targets performance marketers who need to produce many ad variations across multiple platforms (Reddit, Facebook, Instagram, etc.) with consistent visual identity.
+The tool targets performance marketers who need to produce many ad variations across multiple platforms (Reddit, Facebook, Instagram, LinkedIn, X, TikTok, YouTube, Display Ads) with consistent visual identity.
 
 ## Project Structure
 
@@ -30,10 +30,14 @@ The tool targets performance marketers who need to produce many ad variations ac
 ads/
 ├── src/
 │   ├── index.html    # Single-page app shell, all HTML
-│   ├── app.js        # Application logic (~1500 lines)
-│   ├── styles.css    # Full design system (~1500 lines)
-│   └── config.js     # Default values + font presets
+│   ├── app.js        # Application logic (~3200 lines)
+│   ├── config.js     # Effect library, font moods, contrast utilities, defaults (~700 lines)
+│   ├── styles.css    # Full design system (~950 lines)
+│   ├── icon/         # Favicons and app icons
+│   ├── _headers      # Cloudflare security headers
+│   └── _redirects    # Cloudflare routing
 ├── .prompts/         # Claude warm-up and task prompts
+├── deploy.sh         # Cache-busting build script
 ├── LICENSE
 └── README.md
 ```
@@ -42,32 +46,40 @@ ads/
 
 ### 1. Explore the Codebase
 
-Use your tools to inspect the four source files. Understand:
+Use your tools to inspect the source files. Understand:
 
 **index.html:**
 - The three-tab structure (Builder, Data, Export)
-- Left panel (design controls), canvas area, right panel (content inputs)
+- Left panel (design controls), canvas area with template strip, right panel (content inputs)
+- Right panel sections: Layout, Typography, Colors, Template
 - Modal for API key management
-- Google Fonts loading strategy
+- Google Fonts loading strategy (42 fonts in 7 mood categories)
 
 **app.js:**
-- Tab navigation system
-- Canvas rendering pipeline (`generateAd()`, `renderPreview()`, `renderAdToDataUrl()`)
+- Tab navigation and keyboard navigation (arrow keys on Export tab)
+- Canvas rendering pipeline (`generateAd()`, `renderAdToCanvas()`, `renderPreview()`)
 - Typography calculations: how `fitText()` auto-scales text to fit
-- Data management: `dataRows[]` array, CRUD operations
-- AI generation: Claude API integration for copy generation
+- Per-element typography overrides (font, color per element)
+- Data management: `dataRows[]` array, CRUD operations, CSV import/export
+- AI copy generation: Claude API integration with customizable system prompt
+- AI style generation: `generateCanvasStyle()` for colors, effects, typography
+- Effect system: `canvasDecorations[]` array, `executeCanvasCommands()`, layer opacities
+- Template system: `savedVersions[]`, save/import/export/delete, thumbnail generation
 - Export system: JSZip loading, batch PNG generation with DPI metadata
+- State persistence: `saveAppState()`, `loadAppState()`, `saveAppStateDebounced()`
+
+**config.js:**
+- `EFFECT_LIBRARY` - Pre-tested visual effects organized by layer (background, text, foreground)
+- `FONT_MOODS` - 42 fonts categorized by personality (bold, modern, warm, condensed, classic, premium, geometric)
+- Contrast utilities: `getContrastRatio()`, `ensureContrast()` for WCAG compliance
+- `CONFIG` object with defaults and `fontPresets` for per-font optimization
 
 **styles.css:**
 - Jet black design system (CSS custom properties)
 - Surface hierarchy: `--bg-base`, `--bg-secondary`, `--bg-tertiary`, `--bg-elevated`
-- Neomorphic styling: `--shadow-raised`, `--shadow-inset`
-- Component patterns: panels, sections, buttons, sliders, data table
-
-**config.js:**
-- Default canvas size and colors
-- Typography philosophy comment block
-- Font presets: why each font has different size/weight/transform defaults
+- Neomorphic styling: `--shadow-raised`, `--shadow-inset`, `--shadow-button`
+- Component patterns: panels, sections, collapsible cards, buttons, sliders, data table
+- Template thumbnail strip with save button
 
 ### 2. Build a Mental Model
 
@@ -80,23 +92,51 @@ The ad layout uses a four-voice system, each with distinct visual weight:
 
 All sizes are relative to canvas HEIGHT (not width) for responsive scaling. The `fontScale` slider scales everything proportionally.
 
+**Per-Element Overrides:**
+Each text element can override global settings:
+- Font family (inherit or specific font)
+- Color (inherit or hex/rgba)
+These allow for mixed typography within a single design.
+
+**Layer System:**
+AI-generated visual effects are organized into three layers:
+- **Background** - Gradients, vignettes, glows, duotones, noise (rendered first)
+- **Text** - Shadows, glows, outlines (applied to text elements)
+- **Foreground** - Borders, corners, accents (rendered last)
+Each layer has an opacity slider. Opacity 0 disables the layer.
+
 **Rendering Pipeline:**
 1. User changes inputs → `generateAd()` called
-2. Read all UI values, calculate content height
-3. Build elements array with computed font sizes
+2. Read all UI values, load required fonts
+3. Call `renderAdToCanvas()` which:
+   - Fills background color
+   - Executes background layer effects
+   - Calculates content height and positions
+   - Applies text layer effects (shadows/glows)
+   - Draws text elements with per-element colors
+   - Executes foreground layer effects
 4. Render to display canvas (scaled by `dpr`) AND export canvas (1:1 logical pixels)
 5. Update config code preview
 
 **Data Flow:**
-1. Builder tab defines the visual template (colors, typography, sizing)
+1. Builder tab defines the visual template (colors, typography, sizing, effects)
 2. Data tab stores copy variations in `dataRows[]` array
 3. Export tab combines template + selected variations + selected sizes → ZIP
+
+**Template System:**
+- Templates capture the full visual state (colors, typography, effects, layer opacities)
+- Saved to `savedVersions[]` with auto-generated thumbnails
+- Displayed in thumbnail strip at bottom of canvas
+- Can be exported as JSON and imported on other machines
+- `activeVersionIndex` tracks which template is selected
 
 **Key Technical Decisions:**
 - No external dependencies in core app (JSZip loaded dynamically on export)
 - DPI metadata embedded in PNGs for correct Retina display
 - Letter spacing rendered character-by-character (canvas API limitation)
 - Optical Y offset shifts content slightly above true center (more visually balanced)
+- Effects use pre-tested library (AI selects by name, not arbitrary code)
+- State persisted to localStorage with debounced saves
 
 ### 3. Summarize Your Understanding
 
@@ -105,30 +145,40 @@ When done exploring, provide:
 **Architecture Overview:**
 - How the single-file architecture works
 - The relationship between Builder, Data, and Export tabs
-- How the template system enables batch generation
+- How the template and layer systems enable visual variety
+- How the effect library ensures reliable AI styling
 
 **Key Entry Points:**
-- Main render function and what triggers it
-- Data table and variation card rendering
-- AI generation flow
-- Export pipeline
+- `generateAd()` - main render function
+- `generateCanvasStyle()` - AI style generation
+- `generateCopy()` - AI copy generation
+- `renderDataTable()` and `renderVariationCards()` - data display
+- `exportAllAds()` - batch export pipeline
+- `saveCurrentVersion()`, `applyVersion()` - template management
 
 **Important State:**
 - `dataRows[]` - array of copy variations
+- `savedVersions[]` - array of saved templates
+- `canvasDecorations[]` - AI-generated effect commands
 - `selectedExportSizes` - Set of selected size strings
 - `activeVariationIndex` - currently previewed variation
-- `CONFIG` and font presets
+- `activeVersionIndex` - currently selected template
+- `CONFIG`, `EFFECT_LIBRARY`, `FONT_MOODS`
 
 **Configuration Points:**
 - `SIZE_PRESETS` - platform-specific size options
 - `CONFIG.fontPresets` - per-font typography optimization
-- localStorage: `anthropic_api_key`
+- `EFFECT_LIBRARY` - pre-tested visual effects
+- `FONT_MOODS` - font personality categories
+- `DEFAULT_SYSTEM_PROMPT` - AI copy generation prompt
+- localStorage: `anthropic_api_key`, `ad_studio_state`, `ad_studio_versions`
 
 ### 4. Identify Risks and Questions
 
 - Any areas that look fragile or could break under certain conditions?
 - Inconsistencies between Builder preview and Export output?
 - Missing error handling?
+- Race conditions in async operations?
 - Any TODOs or obvious improvements you notice?
 - Questions about intended behavior that aren't clear from code?
 

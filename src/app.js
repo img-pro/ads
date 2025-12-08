@@ -1065,17 +1065,55 @@ function embedPngDpi(dataUrl, dpi) {
   return dataUrl;
 }
 
-function downloadAd() {
+async function downloadAd() {
   const w = parseInt(document.getElementById('width')?.value) || 1200;
   const h = parseInt(document.getElementById('height')?.value) || 628;
 
-  const effectiveDpi = 72 * dpr;
-  const pngData = embedPngDpi(exportCanvas.toDataURL('image/png'), effectiveDpi);
+  const template = getTemplateFromUI();
+  const content = getContentFromUI();
 
-  const link = document.createElement('a');
-  link.download = `ad-${w}x${h}.png`;
-  link.href = pngData;
-  link.click();
+  // Ensure all fonts are loaded (global + per-element overrides)
+  const fontsToLoad = new Set([template.fontFamily]);
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    if (template[el]?.fontFamily) {
+      fontsToLoad.add(template[el].fontFamily);
+    }
+  });
+  await Promise.all(Array.from(fontsToLoad).map(f => ensureFontLoaded(f)));
+
+  // Create 1x version
+  const canvas1x = document.createElement('canvas');
+  canvas1x.width = w;
+  canvas1x.height = h;
+  const ctx1x = canvas1x.getContext('2d');
+  ctx1x.imageSmoothingEnabled = true;
+  ctx1x.imageSmoothingQuality = 'high';
+  renderAdToCanvas(ctx1x, w, h, template, content, 1);
+  const pngData1x = embedPngDpi(canvas1x.toDataURL('image/png'), 72);
+
+  // Create 2x version
+  const canvas2x = document.createElement('canvas');
+  canvas2x.width = w * 2;
+  canvas2x.height = h * 2;
+  const ctx2x = canvas2x.getContext('2d');
+  ctx2x.imageSmoothingEnabled = true;
+  ctx2x.imageSmoothingQuality = 'high';
+  renderAdToCanvas(ctx2x, w, h, template, content, 2);
+  const pngData2x = embedPngDpi(canvas2x.toDataURL('image/png'), 144);
+
+  // Download both files
+  const link1x = document.createElement('a');
+  link1x.download = `ad-${w}x${h}@1x.png`;
+  link1x.href = pngData1x;
+  link1x.click();
+
+  // Small delay to ensure both downloads trigger
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  const link2x = document.createElement('a');
+  link2x.download = `ad-${w}x${h}@2x.png`;
+  link2x.href = pngData2x;
+  link2x.click();
 }
 
 function resetDefaults() {
@@ -1089,7 +1127,12 @@ function resetDefaults() {
   loadDefaults();
   document.getElementById('sizePlatform').value = 'reddit';
   document.getElementById('exportPlatform').value = 'reddit';
-  document.getElementById('aiPrompt').value = '';
+  document.getElementById('productBrief').value = '';
+  document.getElementById('productBriefData').value = '';
+  document.getElementById('stylePrompt').value = '';
+  // Empty brief = unchecked and disabled (consistent with updateProductCheckboxState)
+  document.getElementById('updateCopyCheckbox').checked = false;
+  document.getElementById('updateCopyCheckbox').disabled = true;
   document.getElementById('aiVariationCount').value = '8';
   renderSizeList('reddit');
   renderDataTable();
@@ -1229,12 +1272,15 @@ function saveAppState() {
         offerFont: document.getElementById('offerFont')?.value,
         offerColor: document.getElementById('offerColor')?.value,
         legendFont: document.getElementById('legendFont')?.value,
-        legendColor: document.getElementById('legendColor')?.value
+        legendColor: document.getElementById('legendColor')?.value,
+        // AI Style settings
+        productBrief: document.getElementById('productBrief')?.value,
+        stylePrompt: document.getElementById('stylePrompt')?.value,
+        updateCopy: document.getElementById('updateCopyCheckbox')?.checked
       },
       // Data tab
       data: {
         variations: dataRows,
-        aiPrompt: document.getElementById('aiPrompt')?.value,
         aiLanguage: document.getElementById('aiLanguage')?.value,
         aiVariationCount: document.getElementById('aiVariationCount')?.value,
         systemPrompt: document.getElementById('systemPrompt')?.value
@@ -1326,6 +1372,22 @@ function loadAppState() {
 
       // Update override indicators after restoring all element states
       updateElementOverrideIndicators();
+
+      // Restore AI Style settings
+      if (b.productBrief) {
+        const builderEl = document.getElementById('productBrief');
+        const dataEl = document.getElementById('productBriefData');
+        if (builderEl) builderEl.value = b.productBrief;
+        if (dataEl) dataEl.value = b.productBrief;
+      }
+      if (b.stylePrompt) {
+        const el = document.getElementById('stylePrompt');
+        if (el) el.value = b.stylePrompt;
+      }
+      if (typeof b.updateCopy === 'boolean') {
+        const el = document.getElementById('updateCopyCheckbox');
+        if (el) el.checked = b.updateCopy;
+      }
     }
 
     // Restore Data tab
@@ -1333,10 +1395,6 @@ function loadAppState() {
       dataRows = state.data.variations || [];
       if (dataRows.length > 0) {
         activeVariationIndex = 0;
-      }
-      if (state.data.aiPrompt) {
-        const prompt = document.getElementById('aiPrompt');
-        if (prompt) prompt.value = state.data.aiPrompt;
       }
       if (state.data.aiLanguage) {
         const lang = document.getElementById('aiLanguage');
@@ -1768,7 +1826,8 @@ document.getElementById('exportPlatform')?.addEventListener('change', (e) => {
 function updateExportSummary() {
   const selectedVariations = dataRows.filter(r => r.selected).length;
   const selectedSizesCount = selectedExportSizes.size;
-  const totalFiles = selectedVariations * selectedSizesCount;
+  // Each variation-size combination exports 2 files (1x and 2x)
+  const totalFiles = selectedVariations * selectedSizesCount * 2;
 
   document.getElementById('selectedVariations').textContent = selectedVariations;
   document.getElementById('selectedSizes').textContent = selectedSizesCount;
@@ -1869,9 +1928,10 @@ async function generateWithAI() {
     return;
   }
 
-  const prompt = document.getElementById('aiPrompt')?.value?.trim();
+  // Use shared product brief from Product section
+  const prompt = document.getElementById('productBrief')?.value?.trim();
   if (!prompt) {
-    alert('Please describe your product or service to generate copy variations.');
+    alert('Please describe your product in Builder > Product first.');
     return;
   }
 
@@ -2004,9 +2064,15 @@ async function exportAllAds() {
       const varNum = String(i + 1).padStart(2, '0');
 
       for (const [width, height] of selectedSizes) {
-        const pngData = await renderAdToDataUrl(row, template, width, height);
-        const base64 = pngData.split(',')[1];
-        zip.file(`${varNum}-${width}x${height}.png`, base64, { base64: true });
+        // Export 1x version (root folder)
+        const pngData1x = await renderAdToDataUrl(row, template, width, height, 1);
+        const base641x = pngData1x.split(',')[1];
+        zip.file(`${varNum}-${width}x${height}.png`, base641x, { base64: true });
+
+        // Export 2x version (@2x folder)
+        const pngData2x = await renderAdToDataUrl(row, template, width, height, 2);
+        const base642x = pngData2x.split(',')[1];
+        zip.file(`@2x/${varNum}-${width}x${height}.png`, base642x, { base64: true });
       }
     }
 
@@ -2024,10 +2090,10 @@ async function exportAllAds() {
   }
 }
 
-async function renderAdToDataUrl(row, template, width, height) {
+async function renderAdToDataUrl(row, template, width, height, scale = 1) {
   const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = width;
-  tempCanvas.height = height;
+  tempCanvas.width = width * scale;
+  tempCanvas.height = height * scale;
   const tempCtx = tempCanvas.getContext('2d');
 
   tempCtx.imageSmoothingEnabled = true;
@@ -2041,9 +2107,9 @@ async function renderAdToDataUrl(row, template, width, height) {
     legend: row.legend
   };
 
-  renderAdToCanvas(tempCtx, width, height, template, content, 1);
+  renderAdToCanvas(tempCtx, width, height, template, content, scale);
 
-  const effectiveDpi = 72 * dpr;
+  const effectiveDpi = 72 * scale;
   return embedPngDpi(tempCanvas.toDataURL('image/png'), effectiveDpi);
 }
 
@@ -2155,6 +2221,15 @@ function getCurrentVersion() {
     // Layout
     opticalYOffset: getNum('opticalYOffset'),
 
+    // Copy content
+    content: {
+      intro: getVal('introText'),
+      headline1: getVal('headlineText1'),
+      headline2: getVal('headlineText2'),
+      offer: getVal('offerText'),
+      legend: getVal('legendText')
+    },
+
     // Per-element settings
     intro: {
       font: getVal('introFont'),
@@ -2253,6 +2328,15 @@ async function applyVersion(index) {
 
   // Layout
   setVal('opticalYOffset', version.opticalYOffset);
+
+  // Copy content
+  if (version.content) {
+    setVal('introText', version.content.intro);
+    setVal('headlineText1', version.content.headline1);
+    setVal('headlineText2', version.content.headline2);
+    setVal('offerText', version.content.offer);
+    setVal('legendText', version.content.legend);
+  }
 
   // Per-element settings
   if (version.intro) {
@@ -2648,6 +2732,15 @@ async function applyVersionData(version) {
   // Layout
   setVal('opticalYOffset', version.opticalYOffset);
 
+  // Copy content
+  if (version.content) {
+    setVal('introText', version.content.intro);
+    setVal('headlineText1', version.content.headline1);
+    setVal('headlineText2', version.content.headline2);
+    setVal('offerText', version.content.offer);
+    setVal('legendText', version.content.legend);
+  }
+
   // Per-element settings
   ['intro', 'headline', 'offer', 'legend'].forEach(el => {
     if (version[el]) {
@@ -2863,9 +2956,12 @@ async function applyCanvasStyle() {
     return;
   }
 
-  const prompt = document.getElementById('stylePrompt')?.value?.trim();
-  if (!prompt) {
-    alert('Please describe a visual style for the ad.');
+  const productBrief = document.getElementById('productBrief')?.value?.trim();
+  const stylePrompt = document.getElementById('stylePrompt')?.value?.trim();
+  const updateCopy = document.getElementById('updateCopyCheckbox')?.checked ?? true;
+
+  if (!productBrief && !stylePrompt) {
+    alert('Please describe what you\'re advertising or specify a visual style.');
     return;
   }
 
@@ -2907,9 +3003,11 @@ async function applyCanvasStyle() {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `You are a world-class advertising art director. Style this ad:
+          content: `You are a world-class advertising art director. Create a complete ad design.
 
-"${prompt}"
+## BRIEF
+${productBrief ? `Product/Service: ${productBrief}` : 'No product brief provided - create generic sample copy.'}
+${stylePrompt ? `Visual Style: ${stylePrompt}` : 'Visual Style: Choose an appropriate style based on the product.'}
 
 ## DESIGN PHILOSOPHY
 - Typography is 80% of the design — the ad must look stunning with ZERO effects
@@ -2956,17 +3054,27 @@ Foreground effects (framing and polish):
 - Bold/contained: "border-medium" or "border-bold" — strong framing
 - Cinematic: "gradient-fade-bottom" — dramatic depth
 
+4. SAMPLE COPY (required)
+   Create compelling ad copy that matches the visual style. Use the 4-voice hierarchy:
+   - intro: Short qualifier (2-4 words, e.g., "For Creators", "Finally", "Tired of X?")
+   - headline1: First line of emotional hook (punchy, 3-6 words)
+   - headline2: Second line of emotional hook (completes the thought)
+   - offer: Clear CTA with value (e.g., "Start Free Today", "Get 50% Off")
+   - legend: Trust signal (e.g., "No credit card required", "Join 10,000+ users")
+
 ## CRITICAL RULES
 - ALWAYS ensure high contrast between bgColor and textColor
 - Typography IS the design — effects enhance, never dominate
 - Consider using foreground effects to add polish and framing
 - Pick at most ONE effect per layer
+- Copy should match the mood and energy of the visual style
 
 Return ONLY valid JSON:
 {
   "colors": { "bgColor": "#...", "textColor": "#..." },
   "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
-  "effects": { "background": "gradient-subtle", "text": "shadow-soft", "foreground": "corners" }
+  "effects": { "background": "gradient-subtle", "text": "shadow-soft", "foreground": "corners" },
+  "copy": { "intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..." }
 }`
         }]
       })
@@ -3071,6 +3179,16 @@ Return ONLY valid JSON:
       }
     }
 
+    // Apply sample copy (only if checkbox is checked)
+    if (updateCopy && styles.copy) {
+      const c = styles.copy;
+      if (c.intro) document.getElementById('introText').value = c.intro;
+      if (c.headline1) document.getElementById('headlineText1').value = c.headline1;
+      if (c.headline2) document.getElementById('headlineText2').value = c.headline2;
+      if (c.offer) document.getElementById('offerText').value = c.offer;
+      if (c.legend) document.getElementById('legendText').value = c.legend;
+    }
+
     // Reset layer opacities to 100% for new style
     resetLayerOpacities();
 
@@ -3168,9 +3286,60 @@ function resetBuilder() {
   setupElementColorPickers();
   setupLayerControls();
   updateLayersCardVisibility();
+  setupProductBriefSync();
 
   // Only call generateAd if we didn't already via applyVersion
   if (!restoredVersion) {
     document.fonts.ready.then(() => generateAd());
   }
 })();
+
+// Sync product brief between Builder and Data tabs
+function setupProductBriefSync() {
+  const builderBrief = document.getElementById('productBrief');
+  const dataBrief = document.getElementById('productBriefData');
+  const updateCopyCheckbox = document.getElementById('updateCopyCheckbox');
+
+  if (!builderBrief || !dataBrief) return;
+
+  // Sync from Builder to Data
+  builderBrief.addEventListener('input', () => {
+    dataBrief.value = builderBrief.value;
+    updateProductCheckboxState();
+    saveAppStateDebounced();
+  });
+
+  // Sync from Data to Builder
+  dataBrief.addEventListener('input', () => {
+    builderBrief.value = dataBrief.value;
+    updateProductCheckboxState();
+    saveAppStateDebounced();
+  });
+
+  // Initial sync and checkbox state
+  if (builderBrief.value && !dataBrief.value) {
+    dataBrief.value = builderBrief.value;
+  } else if (dataBrief.value && !builderBrief.value) {
+    builderBrief.value = dataBrief.value;
+  }
+  // Pass true to preserve saved checkbox preference on initial load
+  updateProductCheckboxState(true);
+}
+
+// Enable/disable the "Update copy" checkbox based on product brief content
+// Pass isInitialLoad=true during setup to avoid overwriting saved preference
+function updateProductCheckboxState(isInitialLoad = false) {
+  const brief = document.getElementById('productBrief')?.value?.trim();
+  const checkbox = document.getElementById('updateCopyCheckbox');
+  if (checkbox) {
+    const wasDisabled = checkbox.disabled;
+    checkbox.disabled = !brief;
+    if (!brief) {
+      checkbox.checked = false;
+    } else if (wasDisabled && !checkbox.disabled && !isInitialLoad) {
+      // When enabling (brief just added by user), default to checked
+      // Skip on initial load to preserve saved preference
+      checkbox.checked = true;
+    }
+  }
+}

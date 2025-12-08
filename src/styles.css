@@ -114,9 +114,10 @@ body {
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
-  gap: 20px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .toolbar-title {
@@ -124,19 +125,20 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
-  min-width: 140px;
 }
 
 .toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 140px;
-  justify-content: flex-end;
 }
 
-/* Navigation Tabs */
+/* Navigation Tabs - absolutely centered */
 .toolbar-nav {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -168,9 +170,6 @@ body {
   box-shadow: var(--shadow-button);
 }
 
-.toolbar-spacer {
-  flex: 1;
-}
 
 
 /* Toolbar Buttons */
@@ -366,6 +365,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.section-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  font-style: italic;
 }
 
 .section.collapsed .section-body {
@@ -972,10 +978,15 @@ canvas {
   line-height: 1.5;
   resize: vertical;
   background: var(--surface-inset);
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   box-shadow: var(--shadow-inset);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.style-prompt:hover:not(:focus) {
+  border-color: var(--border-light);
 }
 
 .style-prompt:focus {
@@ -987,6 +998,86 @@ canvas {
 .style-prompt::placeholder {
   color: var(--text-muted);
   line-height: 1.6;
+}
+
+.style-checkbox {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.style-checkbox .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.style-checkbox .checkbox-label:hover {
+  color: var(--text-primary);
+}
+
+.style-checkbox .checkbox-label:has(input:disabled) {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Custom neomorphic checkbox */
+.style-checkbox input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: var(--shadow-inset);
+  transition: all var(--transition-fast);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.style-checkbox input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--border-light);
+  background: var(--bg-tertiary);
+}
+
+.style-checkbox input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow:
+    var(--shadow-inset),
+    0 0 8px rgba(0, 51, 255, 0.3);
+}
+
+.style-checkbox input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.style-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.style-checkbox input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow:
+    var(--shadow-inset),
+    0 0 0 2px var(--accent-muted);
 }
 
 .style-actions {
@@ -2206,8 +2297,9 @@ textarea:focus-visible {
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-/* Style section with AI hint */
-.section:has(.style-prompt) .section-hint {
+/* AI-powered sections get accent hint styling */
+.section:has(.style-prompt) .section-hint,
+.section:has(#aiLanguage) .section-hint {
   background: var(--accent-subtle);
   color: var(--accent);
 }
