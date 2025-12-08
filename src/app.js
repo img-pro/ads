@@ -2352,6 +2352,7 @@ async function applyVersion(index) {
   await generateAd();
   renderPreview();
   renderVersions();
+  saveAppStateDebounced();
 }
 
 // Update all slider value displays - delegates to updateDisplays() for consistency
@@ -2469,6 +2470,7 @@ async function saveCurrentVersion() {
   activeVersionIndex = 0;
   persistVersions();
   renderVersions();
+  saveAppStateDebounced();
 }
 
 // Delete a saved version
@@ -2484,6 +2486,7 @@ function deleteVersion(index, event) {
 
   persistVersions();
   renderVersions();
+  saveAppStateDebounced();
 }
 
 // Render the versions strip with save button
@@ -2895,6 +2898,7 @@ function clearCanvasStyle() {
 
   generateAd();
   renderVersions();
+  saveAppStateDebounced();
 
   // Clear prompt
   const promptEl = document.getElementById('stylePrompt');
