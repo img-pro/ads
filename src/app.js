@@ -1072,6 +1072,15 @@ async function downloadAd() {
   const template = getTemplateFromUI();
   const content = getContentFromUI();
 
+  // Ensure all fonts are loaded (global + per-element overrides)
+  const fontsToLoad = new Set([template.fontFamily]);
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    if (template[el]?.fontFamily) {
+      fontsToLoad.add(template[el].fontFamily);
+    }
+  });
+  await Promise.all(Array.from(fontsToLoad).map(f => ensureFontLoaded(f)));
+
   // Create 1x version
   const canvas1x = document.createElement('canvas');
   canvas1x.width = w;
