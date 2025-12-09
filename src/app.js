@@ -3446,14 +3446,16 @@ function updateProductCheckboxState(isInitialLoad = false) {
   if (!checkbox) return;
 
   const hasBrief = !!brief;
+  const wasDisabled = checkbox.disabled;
   checkbox.disabled = !hasBrief;
 
   if (!hasBrief) {
     // No brief = disabled and unchecked (ignored)
     checkbox.checked = false;
-  } else if (isInitialLoad) {
-    // On initial load, check if we have a saved preference
-    // If no saved state exists, default to checked (fresh install)
+  } else if (isInitialLoad || wasDisabled) {
+    // On initial load OR when transitioning from disabled to enabled,
+    // check if we have a saved preference. If no saved state exists
+    // (fresh install), default to checked.
     const savedState = localStorage.getItem('ad_studio_state');
     if (!savedState) {
       checkbox.checked = true;
