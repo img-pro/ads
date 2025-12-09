@@ -258,6 +258,15 @@ body {
   flex-direction: column;
 }
 
+/* Scrollbar overlays content instead of taking space */
+.panel-content {
+  scrollbar-width: none; /* Firefox */
+}
+
+.panel-content::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 /* Flex variant for left panel - style section grows to fill space */
 .panel-content-flex {
   display: flex;
@@ -1972,32 +1981,57 @@ textarea:focus-visible {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  flex: 1;
 }
 
-.element-hint {
-  font-size: 10px;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--text-muted);
-}
-
-/* Override indicator - blue dot when element has overrides */
+/* Override indicator - hidden by default, blue dot when active, X on hover */
 .override-indicator {
+  width: 12px;
+  height: 12px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  background: none;
+  background-color: transparent;
+  pointer-events: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.override-indicator svg {
+  display: none;
+}
+
+/* Only show when has overrides */
+.override-indicator.active {
+  display: flex;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Blue dot via pseudo-element */
+.override-indicator.active::before {
+  content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: transparent;
-  transition: background var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.override-indicator.active {
   background: var(--accent);
 }
 
-/* Spacer pushes settings button to the right */
-.element-header-spacer {
-  flex: 1;
+.override-indicator.active:hover::before {
+  display: none;
+}
+
+.override-indicator.active:hover svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+  color: var(--text-muted);
 }
 
 /* Settings toggle - subtle, right-aligned */
@@ -2071,27 +2105,9 @@ textarea:focus-visible {
   background: var(--surface-inset);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-inset);
-}
-
-/* Settings Groups */
-.settings-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.settings-group + .settings-group {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.settings-group-title {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 /* Compact slider rows for settings */
@@ -2237,6 +2253,41 @@ textarea:focus-visible {
 /* Hide clear button when already empty */
 .color-swatch-wrap.empty + .color-hex + .color-clear-btn {
   display: none;
+}
+
+/* Slider clear button (for tracking/spacing) */
+.slider-clear-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 4px;
+  transition: all var(--transition-fast);
+  opacity: 0;
+}
+
+.slider-row:hover .slider-clear-btn,
+.slider-row:focus-within .slider-clear-btn {
+  opacity: 1;
+}
+
+.slider-clear-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.slider-clear-btn svg {
+  width: 10px;
+  height: 10px;
 }
 
 .hidden {
