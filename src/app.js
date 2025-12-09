@@ -947,7 +947,7 @@ function getElementFont(elementId) {
 // Helper to get per-element letter spacing (null means inherit)
 function getElementSpacing(elementId) {
   const el = document.getElementById(`${elementId}Spacing`);
-  if (!el || el.value === '' || el.value === 'inherit') return null;
+  if (!el || el.dataset.hasValue !== 'true') return null;
   return parseFloat(el.value);
 }
 
@@ -1328,19 +1328,20 @@ function saveAppState() {
         bgLayerOpacity: document.getElementById('bgLayerOpacity')?.value,
         textLayerOpacity: document.getElementById('textLayerOpacity')?.value,
         fgLayerOpacity: document.getElementById('fgLayerOpacity')?.value,
-        // Per-element typography overrides (color/spacing empty string means inherit)
+        // Per-element typography overrides (empty string means inherit)
+        // For spacing, only save if explicitly set (dataset.hasValue), otherwise save empty string
         introFont: document.getElementById('introFont')?.value,
         introColor: document.getElementById('introColor')?.value,
-        introSpacing: document.getElementById('introSpacing')?.value,
+        introSpacing: document.getElementById('introSpacing')?.dataset.hasValue === 'true' ? document.getElementById('introSpacing')?.value : '',
         headlineFont: document.getElementById('headlineFont')?.value,
         headlineColor: document.getElementById('headlineColor')?.value,
-        headlineSpacing: document.getElementById('headlineSpacing')?.value,
+        headlineSpacing: document.getElementById('headlineSpacing')?.dataset.hasValue === 'true' ? document.getElementById('headlineSpacing')?.value : '',
         offerFont: document.getElementById('offerFont')?.value,
         offerColor: document.getElementById('offerColor')?.value,
-        offerSpacing: document.getElementById('offerSpacing')?.value,
+        offerSpacing: document.getElementById('offerSpacing')?.dataset.hasValue === 'true' ? document.getElementById('offerSpacing')?.value : '',
         legendFont: document.getElementById('legendFont')?.value,
         legendColor: document.getElementById('legendColor')?.value,
-        legendSpacing: document.getElementById('legendSpacing')?.value,
+        legendSpacing: document.getElementById('legendSpacing')?.dataset.hasValue === 'true' ? document.getElementById('legendSpacing')?.value : '',
         // AI Style settings
         productBrief: document.getElementById('productBrief')?.value,
         stylePrompt: document.getElementById('stylePrompt')?.value,
@@ -2280,6 +2281,11 @@ function persistVersions() {
 function getCurrentVersion() {
   const getVal = (id) => document.getElementById(id)?.value || '';
   const getNum = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+  // For spacing, only return value if explicitly set (dataset.hasValue)
+  const getSpacing = (id) => {
+    const el = document.getElementById(id);
+    return el?.dataset.hasValue === 'true' ? el.value : '';
+  };
 
   return {
     // Canvas
@@ -2314,7 +2320,7 @@ function getCurrentVersion() {
       weight: getVal('introWeight'),
       transform: getVal('introTransform'),
       color: getVal('introColor'),
-      spacing: getVal('introSpacing'),
+      spacing: getSpacing('introSpacing'),
       size: getNum('introSize'),
       marginTop: getNum('introMarginTop')
     },
@@ -2323,7 +2329,7 @@ function getCurrentVersion() {
       weight: getVal('headlineWeight'),
       transform: getVal('headlineTransform'),
       color: getVal('headlineColor'),
-      spacing: getVal('headlineSpacing'),
+      spacing: getSpacing('headlineSpacing'),
       size: getNum('headlineSize'),
       lineHeight: getNum('headlineLineHeight'),
       marginTop: getNum('headlineMarginTop')
@@ -2333,7 +2339,7 @@ function getCurrentVersion() {
       weight: getVal('offerWeight'),
       transform: getVal('offerTransform'),
       color: getVal('offerColor'),
-      spacing: getVal('offerSpacing'),
+      spacing: getSpacing('offerSpacing'),
       size: getNum('offerSize'),
       marginTop: getNum('offerMarginTop')
     },
@@ -2342,7 +2348,7 @@ function getCurrentVersion() {
       weight: getVal('legendWeight'),
       transform: getVal('legendTransform'),
       color: getVal('legendColor'),
-      spacing: getVal('legendSpacing'),
+      spacing: getSpacing('legendSpacing'),
       size: getNum('legendSize'),
       marginTop: getNum('legendMarginTop')
     },
