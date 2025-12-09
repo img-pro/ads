@@ -326,9 +326,6 @@ const FONT_MOODS = {
   }
 };
 
-// Flat list of all available fonts (for validation)
-const ALL_FONTS = [...new Set(Object.values(FONT_MOODS).flatMap(m => m.fonts.map(f => f.name)))];
-
 // ==========================================
 // CONTRAST UTILITIES
 // ==========================================

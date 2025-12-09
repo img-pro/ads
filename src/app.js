@@ -219,17 +219,8 @@ function toggleSection(header) {
 function toggleElementSettings(btn) {
   const card = btn.closest('.element-card');
   const settings = card.querySelector('.element-settings');
-  const isOpening = settings.classList.contains('collapsed');
 
-  // Collapse all other element settings first (accordion behavior)
-  document.querySelectorAll('.element-card .element-settings').forEach(s => {
-    if (s !== settings) {
-      s.classList.add('collapsed');
-      s.closest('.element-card').querySelector('.element-settings-btn')?.classList.remove('active');
-    }
-  });
-
-  // Toggle the clicked one
+  // Each panel toggles independently (no accordion behavior)
   settings.classList.toggle('collapsed');
   btn.classList.toggle('active');
 }
@@ -248,6 +239,39 @@ function clearElementColor(elementId) {
   saveAppStateDebounced();
 }
 
+// Clear element spacing override (reset to inherit from global)
+function clearElementSpacing(elementId) {
+  const slider = document.getElementById(`${elementId}Spacing`);
+  if (slider) {
+    slider.dataset.hasValue = 'false';
+    slider.value = 0; // Reset to neutral position
+  }
+  updateSpacingSliderState(elementId);
+  updateElementOverrideIndicators();
+  generateAd();
+  saveAppStateDebounced();
+}
+
+// Update spacing slider display and clear button visibility
+function updateSpacingSliderState(elementId) {
+  const slider = document.getElementById(`${elementId}Spacing`);
+  const valEl = document.getElementById(`${elementId}SpacingVal`);
+  const clearBtn = slider?.parentElement?.querySelector('.slider-clear-btn');
+
+  if (!slider) return;
+
+  // Use data-has-value to track if spacing was explicitly set
+  const hasValue = slider.dataset.hasValue === 'true';
+
+  if (hasValue) {
+    if (valEl) valEl.textContent = Math.round(parseFloat(slider.value) * 100) + '%';
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  } else {
+    if (valEl) valEl.textContent = '';
+    if (clearBtn) clearBtn.classList.add('hidden');
+  }
+}
+
 // Update color swatch empty state based on whether color is set
 function updateColorSwatchState(elementId) {
   const colorText = document.getElementById(`${elementId}Color`);
@@ -261,19 +285,48 @@ function updateColorSwatchState(elementId) {
   swatchWrap.classList.toggle('empty', !hasColor);
 }
 
+// Clear all overrides for an element (font, color, spacing)
+function clearElementOverrides(elementId) {
+  // Clear font
+  const fontSelect = document.getElementById(`${elementId}Font`);
+  if (fontSelect) fontSelect.value = '';
+
+  // Clear color
+  const colorText = document.getElementById(`${elementId}Color`);
+  const colorPicker = document.getElementById(`${elementId}ColorPicker`);
+  if (colorText) colorText.value = '';
+  if (colorPicker) colorPicker.value = '#FFFFFF';
+  updateColorSwatchState(elementId);
+
+  // Clear spacing
+  const spacingSlider = document.getElementById(`${elementId}Spacing`);
+  if (spacingSlider) {
+    spacingSlider.dataset.hasValue = 'false';
+    spacingSlider.value = 0;
+  }
+  updateSpacingSliderState(elementId);
+
+  updateElementOverrideIndicators();
+  generateAd();
+  saveAppStateDebounced();
+}
+
 // Update element override indicators (blue dot when element has typography overrides)
 function updateElementOverrideIndicators() {
   ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
     const indicator = document.getElementById(`${elId}OverrideIndicator`);
     if (!indicator) return;
 
-    const fontVal = document.getElementById(`${elId}Font`)?.value;
-    const colorVal = document.getElementById(`${elId}Color`)?.value;
+    const fontVal = document.getElementById(`${elId}Font`)?.value || '';
+    const colorVal = document.getElementById(`${elId}Color`)?.value || '';
+    const spacingEl = document.getElementById(`${elId}Spacing`);
+    const spacingHasValue = spacingEl?.dataset.hasValue === 'true';
 
-    // Check for any typography override (font or color)
+    // Check for any typography override
     const hasOverride =
-      (fontVal && fontVal !== '') ||
-      (colorVal && (/^#[0-9A-Fa-f]{6}$/i.test(colorVal) || /^rgba?\(/i.test(colorVal)));
+      (fontVal !== '') ||
+      (/^#[0-9A-Fa-f]{6}$/i.test(colorVal) || /^rgba?\(/i.test(colorVal)) ||
+      spacingHasValue;
 
     indicator.classList.toggle('active', hasOverride);
   });
@@ -324,8 +377,21 @@ function setupElementColorPickers() {
       });
     }
 
-    // Initialize swatch state
+    // Wire up spacing slider
+    const spacingSlider = document.getElementById(`${elId}Spacing`);
+    if (spacingSlider) {
+      spacingSlider.addEventListener('input', () => {
+        spacingSlider.dataset.hasValue = 'true';
+        updateSpacingSliderState(elId);
+        updateElementOverrideIndicators();
+        generateAd();
+        saveAppStateDebounced();
+      });
+    }
+
+    // Initialize swatch and spacing states
     updateColorSwatchState(elId);
+    updateSpacingSliderState(elId);
   });
 
   // Initialize override indicators
@@ -361,15 +427,15 @@ function setupLayerControls() {
   });
 }
 
-// Reset layer opacities to 50% (default for AI effects) and update UI
+// Reset layer opacities to 25% (subtle default for AI effects) and update UI
 function resetLayerOpacities() {
   ['bgLayerOpacity', 'textLayerOpacity', 'fgLayerOpacity'].forEach(id => {
     const el = document.getElementById(id);
     const valEl = document.getElementById(`${id}Val`);
     if (el) {
-      el.value = 0.5;
-      if (valEl) valEl.textContent = '50%';
-      // Remove disabled class since opacity is now 50%
+      el.value = 0.25;
+      if (valEl) valEl.textContent = '25%';
+      // Remove disabled class since opacity is now 25%
       const layerRow = el.closest('.layer-row');
       if (layerRow) layerRow.classList.remove('layer-disabled');
     }
@@ -883,7 +949,7 @@ function getElementFont(elementId) {
 // Helper to get per-element letter spacing (null means inherit)
 function getElementSpacing(elementId) {
   const el = document.getElementById(`${elementId}Spacing`);
-  if (!el || el.value === '' || el.value === 'inherit') return null;
+  if (!el || el.dataset.hasValue !== 'true') return null;
   return parseFloat(el.value);
 }
 
@@ -1264,15 +1330,20 @@ function saveAppState() {
         bgLayerOpacity: document.getElementById('bgLayerOpacity')?.value,
         textLayerOpacity: document.getElementById('textLayerOpacity')?.value,
         fgLayerOpacity: document.getElementById('fgLayerOpacity')?.value,
-        // Per-element typography overrides (color is empty string or hex)
+        // Per-element typography overrides (empty string means inherit)
+        // For spacing, only save if explicitly set (dataset.hasValue), otherwise save empty string
         introFont: document.getElementById('introFont')?.value,
         introColor: document.getElementById('introColor')?.value,
+        introSpacing: document.getElementById('introSpacing')?.dataset.hasValue === 'true' ? document.getElementById('introSpacing')?.value : '',
         headlineFont: document.getElementById('headlineFont')?.value,
         headlineColor: document.getElementById('headlineColor')?.value,
+        headlineSpacing: document.getElementById('headlineSpacing')?.dataset.hasValue === 'true' ? document.getElementById('headlineSpacing')?.value : '',
         offerFont: document.getElementById('offerFont')?.value,
         offerColor: document.getElementById('offerColor')?.value,
+        offerSpacing: document.getElementById('offerSpacing')?.dataset.hasValue === 'true' ? document.getElementById('offerSpacing')?.value : '',
         legendFont: document.getElementById('legendFont')?.value,
         legendColor: document.getElementById('legendColor')?.value,
+        legendSpacing: document.getElementById('legendSpacing')?.dataset.hasValue === 'true' ? document.getElementById('legendSpacing')?.value : '',
         // AI Style settings
         productBrief: document.getElementById('productBrief')?.value,
         stylePrompt: document.getElementById('stylePrompt')?.value,
@@ -1346,8 +1417,8 @@ function loadAppState() {
       // Update all slider value displays using the canonical function
       updateDisplays();
 
-      // Restore per-element colors and update swatch states
-      // Supports both hex and rgba formats
+      // Restore per-element colors and spacing, update swatch states
+      // Supports both hex and rgba formats for colors
       ['intro', 'headline', 'offer', 'legend'].forEach(elId => {
         const colorPicker = document.getElementById(`${elId}ColorPicker`);
         const colorText = document.getElementById(`${elId}Color`);
@@ -1367,6 +1438,16 @@ function loadAppState() {
             colorPicker.value = '#FFFFFF';
           }
           updateColorSwatchState(elId);
+        }
+
+        // Restore spacing with data attribute
+        const spacingSlider = document.getElementById(`${elId}Spacing`);
+        const spacing = b[`${elId}Spacing`];
+        if (spacingSlider) {
+          const hasVal = spacing !== undefined && spacing !== null && spacing !== '';
+          spacingSlider.dataset.hasValue = hasVal ? 'true' : 'false';
+          if (hasVal) spacingSlider.value = spacing;
+          updateSpacingSliderState(elId);
         }
       });
 
@@ -2182,7 +2263,7 @@ function loadVersions() {
   try {
     const saved = localStorage.getItem('ad_studio_versions');
     if (saved) {
-      savedVersions = JSON.parse(saved);
+      savedVersions = JSON.parse(saved).map(migrateTemplate);
     }
   } catch (e) {
     console.warn('Failed to load versions:', e);
@@ -2202,6 +2283,11 @@ function persistVersions() {
 function getCurrentVersion() {
   const getVal = (id) => document.getElementById(id)?.value || '';
   const getNum = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+  // For spacing, only return value if explicitly set (dataset.hasValue)
+  const getSpacing = (id) => {
+    const el = document.getElementById(id);
+    return el?.dataset.hasValue === 'true' ? el.value : '';
+  };
 
   return {
     // Canvas
@@ -2236,6 +2322,7 @@ function getCurrentVersion() {
       weight: getVal('introWeight'),
       transform: getVal('introTransform'),
       color: getVal('introColor'),
+      spacing: getSpacing('introSpacing'),
       size: getNum('introSize'),
       marginTop: getNum('introMarginTop')
     },
@@ -2244,6 +2331,7 @@ function getCurrentVersion() {
       weight: getVal('headlineWeight'),
       transform: getVal('headlineTransform'),
       color: getVal('headlineColor'),
+      spacing: getSpacing('headlineSpacing'),
       size: getNum('headlineSize'),
       lineHeight: getNum('headlineLineHeight'),
       marginTop: getNum('headlineMarginTop')
@@ -2253,6 +2341,7 @@ function getCurrentVersion() {
       weight: getVal('offerWeight'),
       transform: getVal('offerTransform'),
       color: getVal('offerColor'),
+      spacing: getSpacing('offerSpacing'),
       size: getNum('offerSize'),
       marginTop: getNum('offerMarginTop')
     },
@@ -2261,6 +2350,7 @@ function getCurrentVersion() {
       weight: getVal('legendWeight'),
       transform: getVal('legendTransform'),
       color: getVal('legendColor'),
+      spacing: getSpacing('legendSpacing'),
       size: getNum('legendSize'),
       marginTop: getNum('legendMarginTop')
     },
@@ -2273,10 +2363,11 @@ function getCurrentVersion() {
     },
 
     // AI Canvas effects (stored as effect names for lookup in EFFECT_LIBRARY)
+    // Supports multiple effects per layer stored as arrays
     canvas: {
-      background: canvasDecorations.find(c => c.layer === 'background')?.effectName || null,
-      text: canvasDecorations.find(c => c.layer === 'text')?.effectName || null,
-      foreground: canvasDecorations.find(c => c.layer === 'foreground')?.effectName || null
+      background: canvasDecorations.filter(c => c.layer === 'background').map(c => c.effectName),
+      text: canvasDecorations.filter(c => c.layer === 'text').map(c => c.effectName),
+      foreground: canvasDecorations.filter(c => c.layer === 'foreground').map(c => c.effectName)
     },
 
     // Style prompt for reference
@@ -2339,42 +2430,60 @@ async function applyVersion(index) {
   }
 
   // Per-element settings
+  // Helper to set spacing with data attribute
+  const setSpacing = (elId, val) => {
+    const slider = document.getElementById(`${elId}Spacing`);
+    if (slider) {
+      const hasVal = val !== undefined && val !== null && val !== '';
+      slider.dataset.hasValue = hasVal ? 'true' : 'false';
+      if (hasVal) slider.value = val;
+    }
+  };
+
   if (version.intro) {
     setVal('introFont', version.intro.font);
     setVal('introWeight', version.intro.weight);
     setVal('introTransform', version.intro.transform);
     setColor('introColorPicker', 'introColor', version.intro.color);
+    setSpacing('intro', version.intro.spacing);
     setVal('introSize', version.intro.size);
     setVal('introMarginTop', version.intro.marginTop);
     updateColorSwatchState('intro');
+    updateSpacingSliderState('intro');
   }
   if (version.headline) {
     setVal('headlineFont', version.headline.font);
     setVal('headlineWeight', version.headline.weight);
     setVal('headlineTransform', version.headline.transform);
     setColor('headlineColorPicker', 'headlineColor', version.headline.color);
+    setSpacing('headline', version.headline.spacing);
     setVal('headlineSize', version.headline.size);
     setVal('headlineLineHeight', version.headline.lineHeight);
     setVal('headlineMarginTop', version.headline.marginTop);
     updateColorSwatchState('headline');
+    updateSpacingSliderState('headline');
   }
   if (version.offer) {
     setVal('offerFont', version.offer.font);
     setVal('offerWeight', version.offer.weight);
     setVal('offerTransform', version.offer.transform);
     setColor('offerColorPicker', 'offerColor', version.offer.color);
+    setSpacing('offer', version.offer.spacing);
     setVal('offerSize', version.offer.size);
     setVal('offerMarginTop', version.offer.marginTop);
     updateColorSwatchState('offer');
+    updateSpacingSliderState('offer');
   }
   if (version.legend) {
     setVal('legendFont', version.legend.font);
     setVal('legendWeight', version.legend.weight);
     setVal('legendTransform', version.legend.transform);
     setColor('legendColorPicker', 'legendColor', version.legend.color);
+    setSpacing('legend', version.legend.spacing);
     setVal('legendSize', version.legend.size);
     setVal('legendMarginTop', version.legend.marginTop);
     updateColorSwatchState('legend');
+    updateSpacingSliderState('legend');
   }
 
   // Layer opacities
@@ -2395,55 +2504,35 @@ async function applyVersion(index) {
   // AI Canvas effects (lookup from EFFECT_LIBRARY by name)
   canvasDecorations = [];
   if (version.canvas) {
-    if (version.canvas.background && EFFECT_LIBRARY.background[version.canvas.background]) {
-      canvasDecorations.push({
-        layer: 'background',
-        draw: EFFECT_LIBRARY.background[version.canvas.background],
-        effectName: version.canvas.background
+    ['background', 'text', 'foreground'].forEach(layer => {
+      const effects = version.canvas[layer] || [];
+      effects.forEach(effectName => {
+        if (effectName && EFFECT_LIBRARY[layer]?.[effectName]) {
+          canvasDecorations.push({
+            layer,
+            draw: EFFECT_LIBRARY[layer][effectName],
+            effectName
+          });
+        }
       });
-    }
-    if (version.canvas.text && EFFECT_LIBRARY.text[version.canvas.text]) {
-      canvasDecorations.push({
-        layer: 'text',
-        draw: EFFECT_LIBRARY.text[version.canvas.text],
-        effectName: version.canvas.text
-      });
-    }
-    if (version.canvas.foreground && EFFECT_LIBRARY.foreground[version.canvas.foreground]) {
-      canvasDecorations.push({
-        layer: 'foreground',
-        draw: EFFECT_LIBRARY.foreground[version.canvas.foreground],
-        effectName: version.canvas.foreground
-      });
-    }
+    });
   }
 
   // Style prompt
   setVal('stylePrompt', version.stylePrompt || '');
 
-  // Update slider value displays
-  updateAllSliderDisplays();
-
-  // Update override indicators
+  // Update UI state
+  updateDisplays();
   updateElementOverrideIndicators();
-
-  // Update layers card visibility
   updateLayersCardVisibility();
-
-  // Update canvas info
   updateCanvasInfo();
 
-  // Await generateAd to ensure fonts are loaded before rendering preview
+  // Render and save
   await generateAd();
   renderPreview();
   renderVersions();
   updateTemplateActionButtons();
   saveAppStateDebounced();
-}
-
-// Update all slider value displays - delegates to updateDisplays() for consistency
-function updateAllSliderDisplays() {
-  updateDisplays();
 }
 
 // Update canvas info display
@@ -2635,6 +2724,27 @@ function updateTemplateActionButtons() {
   if (deleteBtn) deleteBtn.disabled = !hasSelection;
 }
 
+// Migrate template to current format (normalizes legacy data)
+function migrateTemplate(template) {
+  const migrated = { ...template };
+
+  // Normalize canvas effects to arrays
+  if (migrated.canvas) {
+    ['background', 'text', 'foreground'].forEach(layer => {
+      const val = migrated.canvas[layer];
+      if (val === null || val === undefined) {
+        migrated.canvas[layer] = [];
+      } else if (!Array.isArray(val)) {
+        migrated.canvas[layer] = [val];
+      }
+    });
+  } else {
+    migrated.canvas = { background: [], text: [], foreground: [] };
+  }
+
+  return migrated;
+}
+
 // Import template from JSON
 function importTemplate() {
   document.getElementById('templateFileInput').click();
@@ -2655,12 +2765,15 @@ async function handleTemplateImport(event) {
       const data = JSON.parse(e.target.result);
 
       // Support both single template and legacy multi-template format
-      const template = data.template || (data.templates && data.templates[0]);
+      let template = data.template || (data.templates && data.templates[0]);
 
       if (!template) {
         alert('Invalid template file format');
         return;
       }
+
+      // Migrate template to current format
+      template = migrateTemplate(template);
 
       // Apply the imported template settings to generate thumbnail
       await applyVersionData(template);
@@ -2748,6 +2861,13 @@ async function applyVersionData(version) {
       setVal(`${el}Weight`, version[el].weight);
       setVal(`${el}Transform`, version[el].transform);
       setVal(`${el}Color`, version[el].color);
+      // Set spacing with data attribute
+      const spacingSlider = document.getElementById(`${el}Spacing`);
+      if (spacingSlider) {
+        const hasVal = version[el].spacing !== undefined && version[el].spacing !== null && version[el].spacing !== '';
+        spacingSlider.dataset.hasValue = hasVal ? 'true' : 'false';
+        if (hasVal) spacingSlider.value = version[el].spacing;
+      }
       setVal(`${el}Size`, version[el].size);
       setVal(`${el}MarginTop`, version[el].marginTop);
       if (el === 'headline') {
@@ -2763,30 +2883,21 @@ async function applyVersionData(version) {
     setVal('fgLayerOpacity', version.layers.foreground);
   }
 
-  // Canvas effects
+  // Canvas effects (arrays of effect names per layer)
   canvasDecorations = [];
   if (version.canvas) {
-    if (version.canvas.background && EFFECT_LIBRARY.background[version.canvas.background]) {
-      canvasDecorations.push({
-        layer: 'background',
-        draw: EFFECT_LIBRARY.background[version.canvas.background],
-        effectName: version.canvas.background
+    ['background', 'text', 'foreground'].forEach(layer => {
+      const effects = version.canvas[layer] || [];
+      effects.forEach(effectName => {
+        if (effectName && EFFECT_LIBRARY[layer]?.[effectName]) {
+          canvasDecorations.push({
+            layer,
+            draw: EFFECT_LIBRARY[layer][effectName],
+            effectName
+          });
+        }
       });
-    }
-    if (version.canvas.text && EFFECT_LIBRARY.text[version.canvas.text]) {
-      canvasDecorations.push({
-        layer: 'text',
-        draw: EFFECT_LIBRARY.text[version.canvas.text],
-        effectName: version.canvas.text
-      });
-    }
-    if (version.canvas.foreground && EFFECT_LIBRARY.foreground[version.canvas.foreground]) {
-      canvasDecorations.push({
-        layer: 'foreground',
-        draw: EFFECT_LIBRARY.foreground[version.canvas.foreground],
-        effectName: version.canvas.foreground
-      });
-    }
+    });
   }
 
   // Style prompt
@@ -2909,46 +3020,6 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
   }
 }
 
-// Parse AI-generated drawing code into executable functions
-function parseDrawingCode(code, layer) {
-  try {
-    // Validate code doesn't contain dangerous patterns
-    // This is defense-in-depth for code stored in localStorage
-    const dangerousPatterns = [
-      /\beval\b/,
-      /\bFunction\b/,
-      /\bfetch\b/,
-      /\bXMLHttpRequest\b/,
-      /\blocalStorage\b/,
-      /\bsessionStorage\b/,
-      /\bdocument\b/,
-      /\bwindow\b/,
-      /\bglobalThis\b/,
-      /\bimport\b/,
-      /\brequire\b/,
-      /\bpostMessage\b/,
-      /\bconstructor\b/,
-      /\b__proto__\b/,
-      /\bprototype\b/
-    ];
-
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(code)) {
-        console.warn('Rejected canvas code containing dangerous pattern:', pattern);
-        return null;
-      }
-    }
-
-    // Create a function from the code string
-    // The function receives: ctx, w, h, bg, fg (foreground/text color)
-    const fn = new Function('ctx', 'w', 'h', 'bg', 'fg', code);
-    return { layer, draw: fn, code }; // Store original code for saving versions
-  } catch (e) {
-    console.warn('Failed to parse drawing code:', e);
-    return null;
-  }
-}
-
 async function applyCanvasStyle() {
   const apiKey = localStorage.getItem('anthropic_api_key');
   if (!apiKey) {
@@ -2958,7 +3029,7 @@ async function applyCanvasStyle() {
 
   const productBrief = document.getElementById('productBrief')?.value?.trim();
   const stylePrompt = document.getElementById('stylePrompt')?.value?.trim();
-  const updateCopy = document.getElementById('updateCopyCheckbox')?.checked ?? true;
+  const updateCopy = productBrief && document.getElementById('updateCopyCheckbox')?.checked;
 
   if (!productBrief && !stylePrompt) {
     alert('Please describe what you\'re advertising or specify a visual style.');
@@ -2989,6 +3060,36 @@ async function applyCanvasStyle() {
     return `${mood.toUpperCase()}: ${data.description}\n       → ${fontEntries}`;
   }).join('\n     ');
 
+  // Build brief section based on available context
+  let briefSection = '## BRIEF\n';
+  if (productBrief) {
+    briefSection += `Product/Service: ${productBrief}\n`;
+  }
+  if (stylePrompt) {
+    briefSection += `Visual Style: ${stylePrompt}`;
+  } else if (productBrief) {
+    briefSection += 'Visual Style: Choose an appropriate style based on the product.';
+  } else {
+    briefSection += 'Visual Style: Create a visually striking design based on the style description.';
+  }
+
+  // Conditionally include copy generation instructions
+  const copySection = updateCopy ? `
+4. SAMPLE COPY (required)
+   Create compelling ad copy that matches the visual style. Use the 4-voice hierarchy:
+   - intro: Short qualifier (2-4 words, e.g., "For Creators", "Finally", "Tired of X?")
+   - headline1: First line of emotional hook (punchy, 3-6 words)
+   - headline2: Second line of emotional hook (completes the thought)
+   - offer: Clear CTA with value (e.g., "Start Free Today", "Get 50% Off")
+   - legend: Trust signal (e.g., "No credit card required", "Join 10,000+ users")
+` : '';
+
+  const copyRule = updateCopy ? '\n- Copy should match the mood and energy of the visual style' : '';
+
+  const copyJsonExample = updateCopy
+    ? ',\n  "copy": { "intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..." }'
+    : '';
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -3005,9 +3106,7 @@ async function applyCanvasStyle() {
           role: 'user',
           content: `You are a world-class advertising art director. Create a complete ad design.
 
-## BRIEF
-${productBrief ? `Product/Service: ${productBrief}` : 'No product brief provided - create generic sample copy.'}
-${stylePrompt ? `Visual Style: ${stylePrompt}` : 'Visual Style: Choose an appropriate style based on the product.'}
+${briefSection}
 
 ## DESIGN PHILOSOPHY
 - Typography is 80% of the design — the ad must look stunning with ZERO effects
@@ -3032,16 +3131,17 @@ ${stylePrompt ? `Visual Style: ${stylePrompt}` : 'Visual Style: Choose an approp
    - fontScale: 0.85-1.15 (subtle size adjustment, 1.0 is default)
    - letterSpacing: -0.02 to 0.05 (subtle spacing adjustment)
 
-3. EFFECTS (optional — select by name, or "none")
+3. EFFECTS (optional — use array for multiple effects, or "none" for no effects)
+   You can combine multiple effects per layer for rich visuals.
    Background effects: ${bgEffects}
    Text effects: ${textEffects}
    Foreground effects: ${fgEffects}
 
 ## EFFECT GUIDANCE
 Background effects:
-- Dark backgrounds: "gradient-subtle", "gradient-radial", or "vignette-light"
+- Dark backgrounds: combine "gradient-subtle" + "vignette-light" for depth
 - Light backgrounds: "gradient-diagonal" or "duotone-cool"
-- Minimalist: "none"
+- Minimalist: "none" or single subtle effect
 
 Text effects:
 - Dark backgrounds: "shadow-soft", "shadow-medium", or "lift"
@@ -3053,28 +3153,18 @@ Foreground effects (framing and polish):
 - Editorial/news: "line-bottom" — grounds the composition
 - Bold/contained: "border-medium" or "border-bold" — strong framing
 - Cinematic: "gradient-fade-bottom" — dramatic depth
-
-4. SAMPLE COPY (required)
-   Create compelling ad copy that matches the visual style. Use the 4-voice hierarchy:
-   - intro: Short qualifier (2-4 words, e.g., "For Creators", "Finally", "Tired of X?")
-   - headline1: First line of emotional hook (punchy, 3-6 words)
-   - headline2: Second line of emotional hook (completes the thought)
-   - offer: Clear CTA with value (e.g., "Start Free Today", "Get 50% Off")
-   - legend: Trust signal (e.g., "No credit card required", "Join 10,000+ users")
-
+${copySection}
 ## CRITICAL RULES
 - ALWAYS ensure high contrast between bgColor and textColor
 - Typography IS the design — effects enhance, never dominate
 - Consider using foreground effects to add polish and framing
-- Pick at most ONE effect per layer
-- Copy should match the mood and energy of the visual style
+- Effects can be a single string OR an array of multiple effects${copyRule}
 
 Return ONLY valid JSON:
 {
   "colors": { "bgColor": "#...", "textColor": "#..." },
   "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
-  "effects": { "background": "gradient-subtle", "text": "shadow-soft", "foreground": "corners" },
-  "copy": { "intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..." }
+  "effects": { "background": ["gradient-subtle", "vignette-light"], "text": "shadow-soft", "foreground": "corners" }${copyJsonExample}
 }`
         }]
       })
@@ -3147,36 +3237,25 @@ Return ONLY valid JSON:
       }
     }
 
-    // Apply effects from library (selection-based, not code generation)
+    // Apply effects from library (AI returns arrays of effect names)
     if (styles.effects) {
-      const e = styles.effects;
+      ['background', 'text', 'foreground'].forEach(layer => {
+        let effects = styles.effects[layer];
+        if (!effects) return;
 
-      // Background effect
-      if (e.background && e.background !== 'none' && EFFECT_LIBRARY.background[e.background]) {
-        canvasDecorations.push({
-          layer: 'background',
-          draw: EFFECT_LIBRARY.background[e.background],
-          effectName: e.background
-        });
-      }
+        // Normalize to array (AI may return string or array)
+        if (!Array.isArray(effects)) effects = [effects];
 
-      // Text effect
-      if (e.text && e.text !== 'none' && EFFECT_LIBRARY.text[e.text]) {
-        canvasDecorations.push({
-          layer: 'text',
-          draw: EFFECT_LIBRARY.text[e.text],
-          effectName: e.text
+        effects.forEach(effectName => {
+          if (effectName && effectName !== 'none' && EFFECT_LIBRARY[layer]?.[effectName]) {
+            canvasDecorations.push({
+              layer,
+              draw: EFFECT_LIBRARY[layer][effectName],
+              effectName
+            });
+          }
         });
-      }
-
-      // Foreground effect
-      if (e.foreground && e.foreground !== 'none' && EFFECT_LIBRARY.foreground[e.foreground]) {
-        canvasDecorations.push({
-          layer: 'foreground',
-          draw: EFFECT_LIBRARY.foreground[e.foreground],
-          effectName: e.foreground
-        });
-      }
+      });
     }
 
     // Apply sample copy (only if checkbox is checked)
@@ -3255,8 +3334,31 @@ function resetBuilder() {
 // INITIALIZATION
 // ==========================================
 
+// Populate element font selects from FONT_MOODS (once, at startup)
+function populateElementFontSelects() {
+  const selects = document.querySelectorAll('.element-font-select');
+  if (!selects.length) return;
+
+  // Build options HTML with optgroups by mood
+  let html = '<option value="">Inherit</option>';
+  for (const [mood, data] of Object.entries(FONT_MOODS)) {
+    const label = mood.charAt(0).toUpperCase() + mood.slice(1);
+    html += `<optgroup label="${label}">`;
+    for (const font of data.fonts) {
+      html += `<option value="${font.name}">${font.name}</option>`;
+    }
+    html += '</optgroup>';
+  }
+
+  selects.forEach(select => {
+    select.innerHTML = html;
+  });
+}
+
 // Initialize
 (async function init() {
+  // Populate font selects before loading state (so values can be restored)
+  populateElementFontSelects();
   const hasStoredState = loadAppState();
   if (!hasStoredState) {
     loadDefaults();
@@ -3316,6 +3418,13 @@ function setupProductBriefSync() {
     saveAppStateDebounced();
   });
 
+  // Checkbox change saves preference explicitly
+  if (updateCopyCheckbox) {
+    updateCopyCheckbox.addEventListener('change', () => {
+      saveAppStateDebounced();
+    });
+  }
+
   // Initial sync and checkbox state
   if (builderBrief.value && !dataBrief.value) {
     dataBrief.value = builderBrief.value;
@@ -3327,19 +3436,31 @@ function setupProductBriefSync() {
 }
 
 // Enable/disable the "Update copy" checkbox based on product brief content
-// Pass isInitialLoad=true during setup to avoid overwriting saved preference
+// Logic:
+// - Disabled when product brief is empty (no copy generation possible)
+// - Default to checked on fresh install (no saved state)
+// - Persist user's explicit choice across sessions
 function updateProductCheckboxState(isInitialLoad = false) {
   const brief = document.getElementById('productBrief')?.value?.trim();
   const checkbox = document.getElementById('updateCopyCheckbox');
-  if (checkbox) {
-    const wasDisabled = checkbox.disabled;
-    checkbox.disabled = !brief;
-    if (!brief) {
-      checkbox.checked = false;
-    } else if (wasDisabled && !checkbox.disabled && !isInitialLoad) {
-      // When enabling (brief just added by user), default to checked
-      // Skip on initial load to preserve saved preference
+  if (!checkbox) return;
+
+  const hasBrief = !!brief;
+  const wasDisabled = checkbox.disabled;
+  checkbox.disabled = !hasBrief;
+
+  if (!hasBrief) {
+    // No brief = disabled and unchecked (ignored)
+    checkbox.checked = false;
+  } else if (isInitialLoad || wasDisabled) {
+    // On initial load OR when transitioning from disabled to enabled,
+    // check if we have a saved preference. If no saved state exists
+    // (fresh install), default to checked.
+    const savedState = localStorage.getItem('ad_studio_state');
+    if (!savedState) {
       checkbox.checked = true;
     }
+    // Otherwise, the value was already restored by loadAppState()
   }
+  // User interactions are handled by the change event listener
 }
