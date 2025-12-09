@@ -293,7 +293,9 @@ function clearElementOverrides(elementId) {
 
   // Clear color
   const colorText = document.getElementById(`${elementId}Color`);
+  const colorPicker = document.getElementById(`${elementId}ColorPicker`);
   if (colorText) colorText.value = '';
+  if (colorPicker) colorPicker.value = '#FFFFFF';
   updateColorSwatchState(elementId);
 
   // Clear spacing
