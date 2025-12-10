@@ -2077,7 +2077,7 @@ async function callAnthropicAPI(type, messages, maxTokens, model) {
 
     if (response.status === 429) {
       const error = await response.json();
-      const minsUntilReset = Math.ceil((error.resetAt - Date.now()) / 1000 / 60);
+      const minsUntilReset = Math.max(1, Math.ceil((error.resetAt - Date.now()) / 1000 / 60));
       throw new Error(`Demo limit reached (resets in ${minsUntilReset} min). Add your API key for unlimited access.`);
     }
 

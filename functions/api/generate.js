@@ -215,6 +215,7 @@ export async function onRequestPost(context) {
     // Refund quota if API returned an error (user shouldn't pay for server issues)
     if (!anthropicResponse.ok) {
       await refundRateLimit(env, rateInfo);
+      rateInfo.remaining++; // Reflect refund in response header
     }
 
     // Forward the response with rate limit headers
