@@ -1,0 +1,19 @@
+# Cloudflare Pages Functions configuration
+# For local development: npx wrangler pages dev src
+
+name = "ad-studio"
+compatibility_date = "2024-01-01"
+
+# KV namespace for rate limiting
+# Create in Cloudflare dashboard, then add binding here for local dev
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "your-kv-namespace-id"
+
+# Environment variables (secrets set via dashboard or wrangler secret)
+# ANTHROPIC_API_KEY - set via: npx wrangler pages secret put ANTHROPIC_API_KEY
+
+[vars]
+# Rate limiting (both reset on the hour UTC)
+RATE_LIMIT_HOURLY = "100"        # Global pool: max requests per hour across all users
+RATE_LIMIT_USER_HOURLY = "25"    # Per-user: max requests per hour per IP
