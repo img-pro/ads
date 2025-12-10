@@ -1347,7 +1347,10 @@ function saveAppState() {
         // AI Style settings
         productBrief: document.getElementById('productBrief')?.value,
         stylePrompt: document.getElementById('stylePrompt')?.value,
-        updateCopy: document.getElementById('updateCopyCheckbox')?.checked
+        // Only save checkbox state when enabled (user made explicit choice)
+        updateCopy: document.getElementById('updateCopyCheckbox')?.disabled === false
+          ? document.getElementById('updateCopyCheckbox')?.checked
+          : undefined
       },
       // Data tab
       data: {
@@ -3487,7 +3490,7 @@ function setupProductBriefSync() {
 // Enable/disable the "Update copy" checkbox based on product brief content
 // Logic:
 // - Disabled when product brief is empty (no copy generation possible)
-// - Default to checked on fresh install (no saved state)
+// - Default to checked on fresh install or when no explicit preference saved
 // - Persist user's explicit choice across sessions
 function updateProductCheckboxState(isInitialLoad = false) {
   const brief = document.getElementById('productBrief')?.value?.trim();
@@ -3503,13 +3506,19 @@ function updateProductCheckboxState(isInitialLoad = false) {
     checkbox.checked = false;
   } else if (isInitialLoad || wasDisabled) {
     // On initial load OR when transitioning from disabled to enabled,
-    // check if we have a saved preference. If no saved state exists
-    // (fresh install), default to checked.
-    const savedState = localStorage.getItem('ad_studio_state');
-    if (!savedState) {
+    // check if we have an explicit saved preference (boolean).
+    // If no preference saved, default to checked.
+    try {
+      const savedState = localStorage.getItem('ad_studio_state');
+      const state = savedState ? JSON.parse(savedState) : null;
+      if (typeof state?.builder?.updateCopy !== 'boolean') {
+        // No explicit preference saved, default to checked
+        checkbox.checked = true;
+      }
+      // Otherwise, the value was already restored by loadAppState()
+    } catch (e) {
       checkbox.checked = true;
     }
-    // Otherwise, the value was already restored by loadAppState()
   }
   // User interactions are handled by the change event listener
 }

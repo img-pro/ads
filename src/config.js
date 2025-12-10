@@ -375,8 +375,8 @@ function ensureContrast(bg, preferredFg) {
 
 const CONFIG = {
   canvas: {
-    width: 1200,
-    height: 628
+    width: 1440,
+    height: 1080
   },
 
   colors: {
@@ -386,39 +386,39 @@ const CONFIG = {
 
   typography: {
     fontFamily: 'Inter',
-    fontScale: 1,
-    letterSpacing: 0,
-    opticalYOffset: 0.05
+    fontScale: 1.2,
+    letterSpacing: 0.015,
+    opticalYOffset: 0.03
   },
 
   elements: {
     intro: {
-      text: 'WordPress Developers',
-      size: 0.042,
-      weight: '500',
+      text: 'WORDPRESS USER?',
+      size: 0.046,
+      weight: '600',
       transform: 'uppercase',
-      marginTop: 0
+      marginTop: 0.02
     },
     headline: {
-      text: ['Stop Overpaying', 'for Bandwidth'],
-      size: 0.125,
-      weight: '700',
-      transform: 'none',
-      marginTop: 0.015,
-      lineHeight: 1.0
+      text: ['SPEED UP YOUR', 'WORDPRESS SITE'],
+      size: 0.16,
+      weight: '800',
+      transform: 'uppercase',
+      marginTop: 0.05,
+      lineHeight: 0.92
     },
     offer: {
-      text: 'Start Free Today',
-      size: 0.065,
-      weight: '600',
-      transform: 'none',
+      text: 'FREE IMAGE CDN',
+      size: 0.08,
+      weight: '700',
+      transform: 'uppercase',
       marginTop: 0.07
     },
     legend: {
-      text: 'No credit card required',
-      size: 0.028,
+      text: 'NO DNS. INSTANT SETUP.',
+      size: 0.034,
       weight: '400',
-      transform: 'none',
+      transform: 'uppercase',
       marginTop: 0.025
     }
   },
