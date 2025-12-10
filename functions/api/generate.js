@@ -129,7 +129,35 @@ export async function onRequestPost(context) {
     });
   }
 
-  // Check and reserve rate limit quota
+  // Parse and validate request BEFORE reserving rate limit quota
+  // (invalid requests shouldn't consume quota)
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
+    });
+  }
+
+  const { type, model, messages, max_tokens } = body;
+
+  if (!type || !['style', 'copy'].includes(type)) {
+    return new Response(JSON.stringify({ error: 'Invalid request type. Must be "style" or "copy".' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
+    });
+  }
+
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return new Response(JSON.stringify({ error: 'Messages array required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
+    });
+  }
+
+  // Check and reserve rate limit quota (only for valid requests)
   const clientIP = getClientIP(request);
   const rateInfo = await checkAndReserveRateLimit(env, clientIP);
 
@@ -152,34 +180,6 @@ export async function onRequestPost(context) {
         'Retry-After': String(Math.ceil((rateInfo.resetAt - Date.now()) / 1000)),
         ...corsHeaders(origin)
       }
-    });
-  }
-
-  // Parse request body
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
-    });
-  }
-
-  // Validate request structure
-  const { type, model, messages, max_tokens } = body;
-
-  if (!type || !['style', 'copy'].includes(type)) {
-    return new Response(JSON.stringify({ error: 'Invalid request type. Must be "style" or "copy".' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
-    });
-  }
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return new Response(JSON.stringify({ error: 'Messages array required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
     });
   }
 
