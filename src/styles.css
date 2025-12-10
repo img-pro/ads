@@ -120,6 +120,12 @@ body {
   position: relative;
 }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .toolbar-title {
   font-size: 14px;
   font-weight: 600;
@@ -131,6 +137,30 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Demo Mode Badge */
+.demo-badge {
+  padding: 4px 10px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.demo-badge:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+.demo-badge.hidden {
+  display: none;
 }
 
 /* Navigation Tabs - absolutely centered */

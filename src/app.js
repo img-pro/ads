@@ -1981,8 +1981,10 @@ function saveApiKey() {
   const key = input?.value?.trim();
   if (key) {
     localStorage.setItem('anthropic_api_key', key);
-    updateApiKeyStatus();
+  } else {
+    localStorage.removeItem('anthropic_api_key');
   }
+  updateApiKeyStatus();
   closeApiKeyModal();
 }
 
@@ -1996,19 +1998,104 @@ function updateApiKeyStatus() {
     }
     status.classList.toggle('active', hasKey);
   }
+  // Also update demo mode badge visibility
+  if (typeof updateDemoModeUI === 'function') {
+    updateDemoModeUI();
+  }
 }
 
 // ==========================================
 // AI GENERATION
 // ==========================================
 
-async function generateWithAI() {
-  const apiKey = localStorage.getItem('anthropic_api_key');
-  if (!apiKey) {
-    openApiKeyModal();
-    return;
-  }
+// Demo mode state (rate limit info from proxy)
+let demoModeState = {
+  remaining: null,
+  resetAt: null
+};
 
+function updateDemoModeUI() {
+  const badge = document.getElementById('demoModeBadge');
+  if (!badge) return;
+
+  const hasUserKey = !!localStorage.getItem('anthropic_api_key');
+  badge.classList.toggle('hidden', hasUserKey);
+}
+
+// Unified API call handler - uses proxy in demo mode, direct API with user key
+async function callAnthropicAPI(type, messages, maxTokens, model) {
+  const userApiKey = localStorage.getItem('anthropic_api_key');
+
+  if (userApiKey) {
+    // Direct API call with user's key
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': userApiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: maxTokens,
+        messages: messages
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'API request failed');
+    }
+
+    return response.json();
+  } else {
+    // Demo mode - use proxy
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: type,
+        messages: messages,
+        max_tokens: maxTokens
+      })
+    });
+
+    // Update demo mode state from headers
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const resetAt = response.headers.get('X-RateLimit-Reset');
+
+    if (remaining !== null) {
+      demoModeState.remaining = parseInt(remaining);
+    }
+    if (resetAt) {
+      demoModeState.resetAt = parseInt(resetAt) * 1000;
+    }
+    updateDemoModeUI();
+
+    if (response.status === 429) {
+      const error = await response.json();
+      const minsUntilReset = Math.max(1, Math.ceil((error.resetAt - Date.now()) / 1000 / 60));
+      throw new Error(`Demo limit reached (resets in ${minsUntilReset} min). Add your API key for unlimited access.`);
+    }
+
+    if (response.status === 503) {
+      const error = await response.json();
+      throw new Error(error.message || 'Demo mode unavailable. Please add your API key.');
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || error.message || 'API request failed');
+    }
+
+    return response.json();
+  }
+}
+
+async function generateWithAI() {
   // Use shared product brief from Product section
   const prompt = document.getElementById('productBrief')?.value?.trim();
   if (!prompt) {
@@ -2034,21 +2121,7 @@ async function generateWithAI() {
     ? `\n\n## Language\nWrite ALL copy in ${languageName}. The output must be entirely in ${languageName}, not English.`
     : '';
 
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-5-20251101',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `${systemPrompt}
+  const messageContent = `${systemPrompt}
 
 ## Brief from user:
 ${prompt}${languageInstruction}
@@ -2062,17 +2135,15 @@ Generate exactly ${variationCount} variations exploring different emotional angl
 - legend: 3-6 words (trust/friction removal)
 
 Return ONLY a JSON array, no other text:
-[{"intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..."}, ...]`
-        }]
-      })
-    });
+[{"intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..."}, ...]`;
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'API request failed');
-    }
-
-    const data = await response.json();
+  try {
+    const data = await callAnthropicAPI(
+      'copy',
+      [{ role: 'user', content: messageContent }],
+      2048,  // Sufficient for ~8-10 variations; matches server limit for demo mode
+      'claude-opus-4-5-20251101'
+    );
     const content = data.content[0].text;
 
     const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -3021,12 +3092,6 @@ function executeCanvasCommands(targetCtx, width, height, layer, bgColor, textCol
 }
 
 async function applyCanvasStyle() {
-  const apiKey = localStorage.getItem('anthropic_api_key');
-  if (!apiKey) {
-    openApiKeyModal();
-    return;
-  }
-
   const productBrief = document.getElementById('productBrief')?.value?.trim();
   const stylePrompt = document.getElementById('stylePrompt')?.value?.trim();
   const updateCopy = productBrief && document.getElementById('updateCopyCheckbox')?.checked;
@@ -3090,21 +3155,7 @@ async function applyCanvasStyle() {
     ? ',\n  "copy": { "intro": "...", "headline1": "...", "headline2": "...", "offer": "...", "legend": "..." }'
     : '';
 
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: `You are a world-class advertising art director. Create a complete ad design.
+  const messageContent = `You are a world-class advertising art director. Create a complete ad design.
 
 ${briefSection}
 
@@ -3165,17 +3216,15 @@ Return ONLY valid JSON:
   "colors": { "bgColor": "#...", "textColor": "#..." },
   "typography": { "fontFamily": "...", "fontScale": 1.0, "letterSpacing": 0 },
   "effects": { "background": ["gradient-subtle", "vignette-light"], "text": "shadow-soft", "foreground": "corners" }${copyJsonExample}
-}`
-        }]
-      })
-    });
+}`;
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'API request failed');
-    }
-
-    const data = await response.json();
+  try {
+    const data = await callAnthropicAPI(
+      'style',
+      [{ role: 'user', content: messageContent }],
+      1024,
+      'claude-opus-4-5-20251101'
+    );
     const content = data.content[0].text;
 
     // Parse JSON from response
