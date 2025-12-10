@@ -30,14 +30,17 @@ function getClientIP(request) {
          'unknown';
 }
 
-// Check both global and per-user hourly limits
-async function getRateLimitInfo(env, clientIP) {
+// Check and reserve rate limit quota (combined to minimize race window)
+// Note: KV doesn't support atomic operations, so a small race window remains.
+// This is acceptable for a demo rate limiter - worst case, a few extra requests slip through.
+async function checkAndReserveRateLimit(env, clientIP) {
   const globalLimit = parseInt(env.RATE_LIMIT_HOURLY || '25');
   const userLimit = parseInt(env.RATE_LIMIT_USER_HOURLY || '5');
   const hourKey = getHourKey();
   const globalKey = `global:${hourKey}`;
   const userKey = `user:${hashIP(clientIP)}:${hourKey}`;
   const resetAt = Date.now() + getMsUntilNextHour();
+  const ttl = Math.ceil(getMsUntilNextHour() / 1000) + 60;
 
   if (!env.RATE_LIMIT) {
     console.warn('RATE_LIMIT KV not configured, rate limiting disabled');
@@ -45,12 +48,13 @@ async function getRateLimitInfo(env, clientIP) {
   }
 
   try {
+    // Single read operation
     const [globalCount, userCount] = await Promise.all([
       env.RATE_LIMIT.get(globalKey).then(v => parseInt(v) || 0),
       env.RATE_LIMIT.get(userKey).then(v => parseInt(v) || 0)
     ]);
 
-    // Check global limit first
+    // Check global limit
     if (globalCount >= globalLimit) {
       return { allowed: false, remaining: 0, resetAt, reason: 'global' };
     }
@@ -60,31 +64,37 @@ async function getRateLimitInfo(env, clientIP) {
       return { allowed: false, remaining: 0, resetAt, reason: 'user' };
     }
 
+    // Reserve quota immediately (minimizes race window)
+    await Promise.all([
+      env.RATE_LIMIT.put(globalKey, String(globalCount + 1), { expirationTtl: ttl }),
+      env.RATE_LIMIT.put(userKey, String(userCount + 1), { expirationTtl: ttl })
+    ]);
+
     const userRemaining = userLimit - userCount - 1;
-    return { allowed: true, remaining: userRemaining, resetAt, globalKey, userKey };
+    return { allowed: true, remaining: userRemaining, resetAt, globalKey, userKey, globalCount, userCount, ttl };
   } catch (e) {
     console.error('Rate limit check failed:', e);
     return { allowed: true, remaining: userLimit, resetAt: null };
   }
 }
 
-async function incrementRateLimit(env, rateInfo) {
+// Refund quota on API failure (user shouldn't be penalized for server errors)
+async function refundRateLimit(env, rateInfo) {
   if (!env.RATE_LIMIT || !rateInfo.globalKey) return;
 
-  const ttl = Math.ceil(getMsUntilNextHour() / 1000) + 60;
-
   try {
+    // Re-read current values (may have changed) and decrement
     const [globalCount, userCount] = await Promise.all([
       env.RATE_LIMIT.get(rateInfo.globalKey).then(v => parseInt(v) || 0),
       env.RATE_LIMIT.get(rateInfo.userKey).then(v => parseInt(v) || 0)
     ]);
 
     await Promise.all([
-      env.RATE_LIMIT.put(rateInfo.globalKey, String(globalCount + 1), { expirationTtl: ttl }),
-      env.RATE_LIMIT.put(rateInfo.userKey, String(userCount + 1), { expirationTtl: ttl })
+      env.RATE_LIMIT.put(rateInfo.globalKey, String(Math.max(0, globalCount - 1)), { expirationTtl: rateInfo.ttl }),
+      env.RATE_LIMIT.put(rateInfo.userKey, String(Math.max(0, userCount - 1)), { expirationTtl: rateInfo.ttl })
     ]);
   } catch (e) {
-    console.error('Rate limit increment failed:', e);
+    console.error('Rate limit refund failed:', e);
   }
 }
 
@@ -119,9 +129,9 @@ export async function onRequestPost(context) {
     });
   }
 
-  // Check global + per-user hourly rate limits
+  // Check and reserve rate limit quota
   const clientIP = getClientIP(request);
-  const rateInfo = await getRateLimitInfo(env, clientIP);
+  const rateInfo = await checkAndReserveRateLimit(env, clientIP);
 
   if (!rateInfo.allowed) {
     const resetDate = new Date(rateInfo.resetAt);
@@ -200,10 +210,12 @@ export async function onRequestPost(context) {
       })
     });
 
-    // Update rate limit after successful API call
-    await incrementRateLimit(env, rateInfo);
-
     const responseData = await anthropicResponse.json();
+
+    // Refund quota if API returned an error (user shouldn't pay for server issues)
+    if (!anthropicResponse.ok) {
+      await refundRateLimit(env, rateInfo);
+    }
 
     // Forward the response with rate limit headers
     return new Response(JSON.stringify(responseData), {
@@ -218,6 +230,8 @@ export async function onRequestPost(context) {
     });
 
   } catch (e) {
+    // Network error - refund quota
+    await refundRateLimit(env, rateInfo);
     console.error('Anthropic API error:', e);
     return new Response(JSON.stringify({
       error: 'API request failed',

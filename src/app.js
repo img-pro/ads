@@ -2141,7 +2141,7 @@ Return ONLY a JSON array, no other text:
     const data = await callAnthropicAPI(
       'copy',
       [{ role: 'user', content: messageContent }],
-      4096,
+      2048,  // Sufficient for ~8-10 variations; matches server limit for demo mode
       'claude-opus-4-5-20251101'
     );
     const content = data.content[0].text;
