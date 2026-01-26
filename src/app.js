@@ -3359,8 +3359,14 @@ function clearCanvasStyle() {
 }
 
 function resetBuilder() {
-  // Clear localStorage for builder state
-  localStorage.removeItem('ad_studio_state');
+  // Preserve data that should NOT be reset
+  const productBrief = document.getElementById('productBrief')?.value || '';
+  const preservedDataRows = [...dataRows];
+  const aiLanguage = document.getElementById('aiLanguage')?.value || 'English';
+  const aiVariationCount = document.getElementById('aiVariationCount')?.value || '8';
+  const systemPrompt = document.getElementById('systemPrompt')?.value || '';
+  const exportPlatform = document.getElementById('exportPlatform')?.value || 'reddit';
+  const preservedExportSizes = new Set(selectedExportSizes);
 
   // Clear canvas commands and deselect version
   canvasDecorations = [];
@@ -3375,10 +3381,41 @@ function resetBuilder() {
   const promptEl = document.getElementById('stylePrompt');
   if (promptEl) promptEl.value = '';
 
-  // Reset to defaults
+  // Reset design to defaults
   loadDefaults();
 
-  // Re-render
+  // Clear per-element overrides (fonts, colors, spacing)
+  ['intro', 'headline', 'offer', 'legend'].forEach(el => {
+    const fontEl = document.getElementById(`${el}Font`);
+    const colorEl = document.getElementById(`${el}Color`);
+    const spacingEl = document.getElementById(`${el}Spacing`);
+    if (fontEl) fontEl.value = '';
+    if (colorEl) colorEl.value = '';
+    if (spacingEl) {
+      spacingEl.value = '';
+      spacingEl.dataset.hasValue = 'false';
+    }
+  });
+
+  // Restore preserved data
+  document.getElementById('productBrief').value = productBrief;
+  document.getElementById('productBriefData').value = productBrief;
+  dataRows = preservedDataRows;
+  document.getElementById('aiLanguage').value = aiLanguage;
+  document.getElementById('aiVariationCount').value = aiVariationCount;
+  document.getElementById('systemPrompt').value = systemPrompt;
+  document.getElementById('exportPlatform').value = exportPlatform;
+  selectedExportSizes = preservedExportSizes;
+
+  // Update UI for preserved data
+  renderDataTable();
+  renderVariationCards();
+  renderExportSizeList(exportPlatform);
+  updateExportSummary();
+  updateProductCheckboxState();
+
+  // Save state and re-render
+  saveAppState();
   generateAd();
 }
 
